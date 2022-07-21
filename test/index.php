@@ -4,6 +4,8 @@
 
     $db = new SunDB(['driver' => 'mysql', 'host' => 'localhost', 'port' => 3306, 'dbname'=> 'test', 'username' => 'test', 'password' => '1234', 'charset' => 'utf8']); // Don't forget to change dbname, username, and password
 
+    //$db = new SunDB(['driver' => 'sqlite', 'url' => 'test.sqlite']);
+
     // Example for Select Query
     $cols = ['id', 'name', 'surname'];
     $select = $db->select('users', $cols)->orderBy('id', 'desc')->run();

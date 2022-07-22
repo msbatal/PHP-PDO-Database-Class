@@ -1,7 +1,7 @@
 <?php
 
-error_reporting(E_ALL);
-ini_set('display_errors', TRUE);
+//error_reporting(E_ALL);
+//ini_set('display_errors', TRUE);
 
 /**
  * SunDB Class
@@ -112,7 +112,7 @@ class SunDB
 
     /**
      * Limit condition value for SQL query
-     * @var integer
+     * @var string
      */
     private $limit;
 
@@ -152,6 +152,13 @@ class SunDB
                 }
             }
         }
+    }
+
+    /**
+     * Close PDO connection
+     */
+    public function __destruct() {
+        $this->pdo = null;
     }
 
     /**
@@ -208,6 +215,24 @@ class SunDB
     }
 
     /**
+     * Reset SunDB internal variables
+     */
+    private function reset() {
+        $this->query        = '';
+        $this->action       = '';
+        $this->table        = '';
+        $this->values       = [];
+        $this->where        = [];
+        $this->orWhere      = [];
+        $this->groupBy      = '';
+        $this->having       = '';
+        $this->orderBy      = [];
+        $this->limit        = '';
+        $this->lastInsertId = 0;
+        $this->rowCount     = 0;
+    }
+
+    /**
      * Check if table exists
      *
      * @param string $table
@@ -243,6 +268,7 @@ class SunDB
      * @return object
      */
     public function select($table = null, $columns = '*') {
+        $this->reset();
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkTable) {
             $this->checkTable($table);
         }
@@ -266,6 +292,7 @@ class SunDB
      * @return object
      */
     public function insert($table = null, $data = []) {
+        $this->reset();
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkTable) {
             $this->checkTable($table);
         }
@@ -294,6 +321,7 @@ class SunDB
      * @return object
      */
     public function update($table = null, $data = []) {
+        $this->reset();
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkTable) {
             $this->checkTable($table);
         }
@@ -318,6 +346,7 @@ class SunDB
      * @return object
      */
     public function delete($table = null) {
+        $this->reset();
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkTable) {
             $this->checkTable($table);
         }
@@ -439,15 +468,20 @@ class SunDB
     /**
      * Abstraction method that will build the LIMIT part of the WHERE statement
      *
-     * @param integer $limit
+     * @param integer $start
+     * @param integer $page
      * @throws exception
      * @return object
      */
-    public function limit($limit = null) {
-        if (empty($limit) || !is_int($limit)) {
+    public function limit($start = null, $page = null) {
+        if (empty($start) || !is_int($start)) {
             throw new Exception('Limit clause must be 1 or above.');
         }
-        $this->limit = $limit;
+        if (empty($page) || !is_int($page)) {
+            $page=$start;
+            $start=0;
+        }
+        $this->limit = $start.','.$page;
         return $this;
     }
 
@@ -492,7 +526,7 @@ class SunDB
         if (is_array($this->orderBy) && count($this->orderBy) > 0) { // add Order By condition
             $this->query .= ' order by '.implode(',', $this->orderBy);
         }
-        if (is_int($this->limit)) { // add Limit condition
+        if (!empty($this->limit)) { // add Limit condition
             $this->query .= ' limit '.$this->limit;
         }
         switch ($this->action) {

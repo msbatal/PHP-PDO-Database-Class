@@ -172,6 +172,9 @@ $select = $db->select('tableName')->run(); //contains an array/object of all rec
 
 $select = $db->select('tableName')->limit(4)->run(); //contains an array/object of X records
 // Gives: SELECT * FROM tableName LIMIT 4;
+
+$select = $db->select('tableName')->limit(2,4)->run(); //contains an array/object of X records
+// Gives: SELECT * FROM tableName LIMIT 2,4;
 ```
 
 or select with custom columns set

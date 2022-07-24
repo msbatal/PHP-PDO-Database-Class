@@ -8,7 +8,7 @@
  *
  * @category  Database Access
  * @package   SunDB
- * @author    Mehmet Selcuk Batal <batalms@gmail.com>
+ * @author    Mehmet Selçuk Batal <batalms@gmail.com>
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
@@ -279,7 +279,7 @@ class SunDB
         }
         $this->table = $table;
         $this->action = 'select';
-        $this->query = 'select '.$columns.' from '.$table;
+        $this->query = 'select '.$columns.' from `'.$table.'`';
         return $this;
     }
     
@@ -352,7 +352,7 @@ class SunDB
         }
         $this->table = $table;
         $this->action = 'delete';
-        $this->query = 'delete from '.$table;
+        $this->query = 'delete from `'.$table.'`';
         return $this;
     }
 
@@ -376,12 +376,12 @@ class SunDB
                 $this->checkColumn($column);
             }
             if ($operator == "between" || $operator == "not between") {
-                $this->where[] = '('.$column.' '.$operator.' \''.$value[0].'\' and \''.$value[1].'\')';
+                $this->where[] = '(`'.$column.'` '.$operator.' \''.$value[0].'\' and \''.$value[1].'\')';
             } else if ($operator == "in" || $operator == "not in") {
                 foreach ($value as $val) {$values[] = "'".$val."'";}
-                $this->where[] = '('.$column.' '.$operator.' ('.implode(',', $values).'))';
+                $this->where[] = '(`'.$column.'` '.$operator.' ('.implode(',', $values).'))';
             } else {
-                $this->where[] = '('.$column.$operator.'\''.$value.'\')';
+                $this->where[] = '(`'.$column.'`'.$operator.'\''.$value.'\')';
             }
         }
         return $this;
@@ -403,7 +403,7 @@ class SunDB
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkColumn) {
             $this->checkColumn($column);
         }
-        $this->orWhere[] = '('.$column.$operator.'\''.$value.'\')';
+        $this->orWhere[] = '(`'.$column.'`'.$operator.'\''.$value.'\')';
         return $this;
     }
 
@@ -421,7 +421,7 @@ class SunDB
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkColumn) {
             $this->checkColumn($column);
         }
-        $this->groupBy = $column;
+        $this->groupBy = '`'.$column.'`';
         return $this;
     }
 
@@ -460,7 +460,7 @@ class SunDB
             if ($this->connectionParams['driver'] != "sqlite" && $this->checkColumn) {
                 $this->checkColumn($column);
             }
-            $this->orderBy[] = $column.' '.$order;
+            $this->orderBy[] = '`'.$column.'` '.$order;
         }
         return $this;
     }
@@ -492,8 +492,8 @@ class SunDB
      * @return object
      */
     public function rawQuery($query = null) {
-        $checkQuery = explode(' ',$query); // for determine the action
-        $this->action = $checkQuery[0];
+        $this->reset();
+        $this->action = 'query';
         $this->query = $query;
         return $this;
     }
@@ -554,6 +554,17 @@ class SunDB
                 $query = $this->pdo()->query($this->query);
                 if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
                 return true;
+            break;
+            case 'query': // run Raw query and return the result (bool)
+                $query = $this->pdo()->query($this->query);
+                if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
+                $exp = explode(' ', $this->query); // for determine the action
+                if ($exp[0] == "select") {
+                    $this->queryResult = $query->fetchAll();
+                    return $this->queryResult;
+                } else {
+                    return true;
+                }
             break;
             default:
                 throw new Exception('Command "'.$this->action.'" is not allowed.');

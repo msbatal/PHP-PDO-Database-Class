@@ -11,11 +11,12 @@ SunDB is a PHP PDO database class that utilizes PDO and prepared statements (MyS
 - **[Update Query](#update-query)**
 - **[Delete Query](#delete-query)**
 - **[Select Query](#select-query)**
-- **[Running raw SQL queries](#running-raw-sql-queries)**
 - **[Where Method](#where-method)**
 - **[Ordering Method](#ordering-method)**
+- **[Limiting Method](#limiting-method)**
 - **[Grouping Method](#grouping-method)**
 - **[Having Method](#having-method)**
+- **[Raw SQL Queries](#raw-sql-queries)**
 - **[Backup Database](#backup-database)**
 - **[Helper Methods](#helper-methods)**
 
@@ -172,9 +173,6 @@ $select = $db->select('tableName')->run(); //contains an array/object of all rec
 
 $select = $db->select('tableName')->limit(4)->run(); //contains an array/object of X records
 // Gives: SELECT * FROM tableName LIMIT 4;
-
-$select = $db->select('tableName')->limit(2,4)->run(); //contains an array/object of X records
-// Gives: SELECT * FROM tableName LIMIT 2,4;
 ```
 
 or select with custom columns set
@@ -214,22 +212,10 @@ $select = $db->select('tableName', ['count(*) as total'])->run();
 echo $select[0]['total'];
 ```
 
-### Running raw SQL queries
-
-```php
-$select = $db->rawQuery("select column1,column2 from tableName")->limit(2)->run();
-// Gives: SELECT column1,column2 FROM tableName LIMIT 2;
-
-foreach ($select as $rows) {
-    print_r($rows);
-}
-```
-
 ### Where Method
 
-`where()` or `orWhere()` methods allows you to specify where condition of the query. All conditions supported by where() as well.
+`where()` or `orWhere()` methods allow you to specify `where` condition of the query. This method is supported by `select`, `update` and `delete` queries, and uses prepared statements (also bind parameters).
 
-Regular == operator with variables:
 ```php
 $select = $db->select('tableName')
              ->where('column', 'value', '=')
@@ -281,14 +267,22 @@ $select = $db->select('tableName')
 ```
 
 AND and OR CASE
-
 ```php
 $select = $db->select('tableName')
              ->where('column1', 'value1', '=')
              ->where('column2', 'value2', '=')
              ->orWhere('column3', 'value3', '=')
              ->run();
-// Gives: SELECT * FROM tableName WHERE (column1='value1' AND column2='value2') OR column3='value3';
+// Gives: SELECT * FROM tableName WHERE column1='value1' AND column2='value2' OR column3='value3';
+```
+
+```php
+$select = $db->select('tableName')
+             ->orWhere('column1', 'value1', '=')
+             ->where('column2', 'value2', '=')
+             ->where('column3', 'value3', '=')
+             ->run();
+// Gives: SELECT * FROM tableName WHERE column1='value1' AND column2='value2' AND column3='value3';
 ```
 
 Also you can use raw where conditions:
@@ -311,7 +305,9 @@ $total = $db->tableCount('tableName');
 echo "{$total} rows found.";
 ```
 
-### Ordering method
+### Ordering Method
+
+`orderBy()` method allows you to specify `order by` condition of the query. This method is supported by `select`, `update` and `delete` queries.
 
 ```php
 $select = $db->select('tableName', ['column1', 'column2'])
@@ -322,7 +318,36 @@ $select = $db->select('tableName', ['column1', 'column2'])
 // Gives: SELECT column1,column2 FROM tableName ORDER BY column1 ASC, column2 DESC, RAND ();
 ```
 
-### Grouping method
+### Limiting Method
+
+`limit()` method allows you to specify `limit` condition of the query. This method is supported by `select`, `update` and `delete` queries.
+
+```php
+$select = $db->select('tableName', ['column'])->limit(1)->run();
+// Gives: SELECT column FROM tableName LIMIT 1;
+
+echo $select[0]['column'];
+```
+
+```php
+$delete = $db->delete('tableName')
+             ->where('column', 'value', '>')
+             ->orderBy('column', 'desc')
+             ->limit(5)
+             ->run();
+// Gives: DELETE FROM tableName WHERE column > value ORDER BY column DESC limit 5;
+
+//if ($delete) {
+if ($db->rowCount() > 0) {
+    echo $db->rowCount().' records deleted successfully!';
+} else {
+    echo 'Delete failed!';
+}
+```
+
+### Grouping Method
+
+`groupBy()` method allows you to specify `group by` condition of the query. This method is supported by only `select` query.
 
 ```php
 $select = $db->select('tableName')
@@ -332,7 +357,9 @@ $select = $db->select('tableName')
 // Gives: SELECT * FROM tableName GROUP BY column;
 ```
 
-### Having method
+### Having Method
+
+`having()` method allows you to specify `having` condition of the query. This method is supported by only `select` query.
 
 ```php
 $select = $db->select('tableName')
@@ -342,7 +369,34 @@ $select = $db->select('tableName')
 // Gives: SELECT * FROM tableName GROUP BY column HAVING column >= value;
 ```
 
-### Backup database
+### Raw SQL Queries
+
+Execute raw SQL queries:
+```php
+$select = $db->rawQuery("select column1,column2 from tableName where (column1='value1' && column2='value2')")
+             ->limit(2)
+             ->run();
+// Gives: SELECT column1,column2 FROM tableName WHERE (column1='value1' && column2='value2') LIMIT 2;
+
+foreach ($select as $rows) {
+    print_r($rows);
+}
+```
+
+or use prepared statements (bind parameters):
+```php
+$select = $db->rawQuery("select column1,column2 from tableName where (column1=? && column2=?)", ['value1', 'value2'])
+             ->limit(2)
+             ->run();
+// Gives: SELECT column1,column2 FROM tableName WHERE (column1='value1' && column2='value2') LIMIT 2;
+
+foreach ($select as $rows) {
+    print_r($rows);
+}
+```
+
+### Backup Database
+
 Download the whole database (tables and records) as an SQL file:
 ```php
 $db->backup('fileName', 'save');
@@ -354,7 +408,7 @@ Show the whole database (tables and records) as an SQL query:
 $db->backup(null, 'show');
 ```
 
-### Helper methods
+### Helper Methods
 
 Get last executed SQL query:
 ```php

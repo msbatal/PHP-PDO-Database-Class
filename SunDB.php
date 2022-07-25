@@ -8,11 +8,11 @@
  *
  * @category  Database Access
  * @package   SunDB
- * @author    Mehmet Selçuk Batal <batalms@gmail.com>
+ * @author    Mehmet Selcuk Batal <batalms@gmail.com>
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.3.0
+ * @version   2.3.2
  */
 
 class SunDB
@@ -75,7 +75,7 @@ class SunDB
     private $table;
 
     /**
-     * Array that holds Where values
+     * Array that holds Insert/Update values
      * @var array
      */
     private $values = [];
@@ -91,6 +91,12 @@ class SunDB
      * @var array
      */
     private $orWhere = [];
+
+    /**
+     * Array that holds Where values
+     * @var array
+     */
+    private $whereValues = [];
 
     /**
      * Dynamic type list for Group By condition value
@@ -177,7 +183,6 @@ class SunDB
 
         } else if ($this->connectionParams['driver'] == "mssql") {
             $connectionString = 'sqlsrv:Server='.$this->connectionParams['host'].';Database='.$this->connectionParams['dbname'];
-            var_dump($connectionString);
             $this->pdo = new PDO($connectionString, $this->connectionParams['username'], $this->connectionParams['password']);
         } else {
             $connectionString = $this->connectionParams['driver'].':';
@@ -224,6 +229,7 @@ class SunDB
         $this->values       = [];
         $this->where        = [];
         $this->orWhere      = [];
+        $this->whereValues  = [];
         $this->groupBy      = '';
         $this->having       = '';
         $this->orderBy      = [];
@@ -302,6 +308,7 @@ class SunDB
         foreach ($data as $key => $value) {
             $keys[] = '`'.$key.'`';
             $alias[] = "?";
+            if (empty($value)) {$value = '';}
             $this->values[] = $value;
         }
         $keys = implode(',', $keys);
@@ -330,6 +337,7 @@ class SunDB
         }
         foreach ($data as $key => $value) {
             $keys[] = '`'.$key.'`=?';
+            if (empty($value)) {$value = '';}
             $this->values[] = $value;
         }
         $keys = implode(',', $keys);
@@ -357,17 +365,18 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build the WHERE part of the query string (uses AND operator)
+     * Abstraction method that will build the AND WHERE part of the query string
      *
      * @param string $column
      * @param string $value
      * @param string $operator
+     * @param string $condition
      * @throws exception
      * @return object
      */
-    public function where($column = null, $value = null, $operator = null) {
+    public function where($column = null, $value = null, $operator = null, $condition = 'and') {
         if (empty($value) && empty($operator)) {
-            $this->where[] = $column;
+            $this->where[] = $condition.' '.$column;
         } else {
             if (empty($column) || empty($operator)) {
                 throw new Exception('Where clause must contain a value and operator.');
@@ -376,19 +385,30 @@ class SunDB
                 $this->checkColumn($column);
             }
             if ($operator == "between" || $operator == "not between") {
-                $this->where[] = '(`'.$column.'` '.$operator.' \''.$value[0].'\' and \''.$value[1].'\')';
+                if (!empty($value[0]) && !empty($value[1])) {
+                    $this->whereValues[] = $value[0];
+                    $this->whereValues[] = $value[1];
+                    $this->where[] = $condition.' (`'.$column.'` '.$operator.' ? and ?)';
+                }
             } else if ($operator == "in" || $operator == "not in") {
-                foreach ($value as $val) {$values[] = "'".$val."'";}
-                $this->where[] = '(`'.$column.'` '.$operator.' ('.implode(',', $values).'))';
+                if (is_array($value) && count($value)>0) {
+                    foreach ($value as $val) {
+                        $values[] = '?';
+                        $this->whereValues[] = $val;
+                    }
+                    $this->where[] = $condition.' (`'.$column.'` '.$operator.' ('.implode(',', $values).'))';
+                }
             } else {
-                $this->where[] = '(`'.$column.'`'.$operator.'\''.$value.'\')';
+                $this->where[] = $condition.' (`'.$column.'`'.$operator.'?) ';
+                if (empty($value)) {$value = '';}
+                $this->whereValues[] = $value;
             }
         }
         return $this;
     }
 
     /**
-     * Abstraction method that will build the WHERE part of the query string (uses OR operator)
+     * Abstraction method that will build the OR WHERE part of the query string
      *
      * @param string $column
      * @param string $value
@@ -397,14 +417,7 @@ class SunDB
      * @return object
      */
     public function orWhere($column = null, $value = null, $operator = null) {
-        if (empty($column) || empty($operator)) {
-            throw new Exception('Where clause must contain a value and operator.');
-        }
-        if ($this->connectionParams['driver'] != "sqlite" && $this->checkColumn) {
-            $this->checkColumn($column);
-        }
-        $this->orWhere[] = '(`'.$column.'`'.$operator.'\''.$value.'\')';
-        return $this;
+        return $this->where($column, $value, $operator, 'or');
     }
 
     /**
@@ -489,10 +502,17 @@ class SunDB
      * Perform SQL query
      *
      * @param string $query
+     * @param array $values
      * @return object
      */
-    public function rawQuery($query = null) {
+    public function rawQuery($query = null, $values = []) {
         $this->reset();
+        if (is_array($values) && count($values)>0) {
+            foreach ($values as $value) {
+                if (empty($value)) {$value = '';}
+                $this->values[] = $value;
+            }
+        }
         $this->action = 'query';
         $this->query = $query;
         return $this;
@@ -505,17 +525,18 @@ class SunDB
      * @return array|object|boolean
      */
     public function run() {
-        if (is_array($this->where) && count($this->where) > 0) {
-            $this->query .= ' where ('.implode(' and ',$this->where).')';// add Where (and) condition
-            if (is_array($this->orWhere) && count($this->orWhere) > 0) { // add Where (and+or) condition
-                $this->query .= ' or (';
-                $this->query .= implode(' or ', $this->orWhere);
-                $this->query .= ')';
+        if (is_array($this->where) && count($this->where) > 0) { // add Where condition
+            $count = 0;
+            $clnWhere = array();
+            foreach ($this->where as $key => $value) { // remove first And/OR part 
+                $count++;
+                if ($count == 1) {
+                    $clnWhere[] = ltrim(ltrim($value, 'or'), 'and');
+                } else {
+                    $clnWhere[] = $value;
+                }
             }
-        } else {
-            if (is_array($this->orWhere) && count($this->orWhere) > 0) { // add Where (or) condition
-                $this->query .= ' where ('.implode(' or ',$this->orWhere).')';
-            }
+            $this->query .= ' where ('.implode(' ', $clnWhere).')';
         }
         if (!empty($this->groupBy)) { // add Group By condition
             $this->query .= ' group by '.$this->groupBy;
@@ -532,7 +553,7 @@ class SunDB
         switch ($this->action) {
             case 'select': // run Select query and return the result (array|object)
                 $query = $this->pdo()->prepare($this->query);
-                $query->execute(array());
+                $query->execute($this->whereValues);
                 $this->queryResult = $query->fetchAll();
                 if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
                 return $this->queryResult;
@@ -546,17 +567,19 @@ class SunDB
             break;
             case 'update': // run Update query and return the result (bool)
                 $query = $this->pdo()->prepare($this->query);
-                $query->execute($this->values);
+                $query->execute(array_merge($this->values,$this->whereValues));
                 if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
                 return true;
             break;
             case 'delete': // run Delete query and return the result (bool)
-                $query = $this->pdo()->query($this->query);
+                $query = $this->pdo()->prepare($this->query);
+                $query->execute($this->whereValues);
                 if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
                 return true;
             break;
             case 'query': // run Raw query and return the result (bool)
-                $query = $this->pdo()->query($this->query);
+                $query = $this->pdo()->prepare($this->query);
+                $query->execute($this->values);
                 if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
                 $exp = explode(' ', $this->query); // for determine the action
                 if ($exp[0] == "select") {

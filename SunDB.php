@@ -12,7 +12,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.3.2
+ * @version   2.3.0
  */
 
 class SunDB
@@ -140,7 +140,7 @@ class SunDB
      * @param string $username
      * @param string $password
      * @param string $dbname
-     * @param int $port
+     * @param integer $port
      * @param string $charset
      */
     public function __construct($type = null, $host = null, $username = null, $password = null, $dbname = null, $port = null, $charset = null) {
@@ -267,7 +267,7 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build a SELECT part of the query
+     * Build a SELECT part of the query
      *
      * @param string $table
      * @param string|array $columns
@@ -290,7 +290,7 @@ class SunDB
     }
     
     /**
-     * Abstraction method that will build an INSERT part of the query
+     * Build an INSERT part of the query
      *
      * @param string $table
      * @param array $data
@@ -320,7 +320,7 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build an UPDATE part of the query
+     * Build an UPDATE part of the query
      *
      * @param string $table
      * @param string|array $data
@@ -348,7 +348,7 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build a DELETE part of the query
+     * Build a DELETE part of the query
      *
      * @param string $table
      * @return object
@@ -365,7 +365,7 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build the AND WHERE part of the query string
+     * Build the AND WHERE part of the query string
      *
      * @param string $column
      * @param string $value
@@ -408,7 +408,7 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build the OR WHERE part of the query string
+     * Build the OR WHERE part of the query string
      *
      * @param string $column
      * @param string $value
@@ -421,7 +421,7 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build the GROUP BY part of the WHERE statement
+     * Build the GROUP BY part of the WHERE statement
      *
      * @param string $column
      * @throws exception
@@ -439,7 +439,7 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build the HAVING part of the GROUP BY clause
+     * Build the HAVING part of the GROUP BY clause
      *
      * @param string $value
      * @throws exception
@@ -456,7 +456,7 @@ class SunDB
     }
     
     /**
-     * Abstraction method that will build the ORDER BY part of the WHERE statement
+     * Build the ORDER BY part of the WHERE statement
      *
      * @param string $column
      * @param string $order
@@ -479,7 +479,7 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build the LIMIT part of the WHERE statement
+     * Build the LIMIT part of the WHERE statement
      *
      * @param integer $start
      * @param integer $page
@@ -519,7 +519,7 @@ class SunDB
     }
 
     /**
-     * Method that will compile/execute the SQL query and return the result
+     * Compile/Execute the SQL query and return the result
      *
      * @throws exception
      * @return array|object|boolean
@@ -596,7 +596,7 @@ class SunDB
     }
 
     /**
-     * Performs backup the database and print/download backup file
+     * Perform backup the database and print/download backup file
      *
      * @param string $file
      * @param string $type
@@ -644,7 +644,7 @@ class SunDB
     }
 
     /**
-     * Shows/Prints the executed query as a string
+     * Show/Print executed query as a string
      */
     public function showQuery() {
         if (empty($this->query)) {
@@ -655,7 +655,7 @@ class SunDB
     }
 
     /**
-     * Returns the total record count in a table
+     * Return the total record count in a table
      *
      * @param string $table
      * @return int
@@ -669,7 +669,7 @@ class SunDB
     }
 
     /**
-     * Returns the number of affected rows
+     * Return the number of affected rows
      *
      * @return int
      */
@@ -678,7 +678,7 @@ class SunDB
     }
 
     /**
-     * Returns the value of the auto increment column
+     * Return the value of the auto increment column
      *
      * @return int
      */
@@ -687,7 +687,7 @@ class SunDB
     }
 
     /**
-     * Generates user defined function call
+     * Generate user defined function call
      *
      * @param string $func
      * @param string $param

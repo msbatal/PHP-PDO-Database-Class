@@ -596,7 +596,7 @@ class SunDB
     }
 
     /**
-     * Method that will backup the database and print/download backup file
+     * Performs backup the database and print/download backup file
      *
      * @param string $file
      * @param string $type
@@ -644,7 +644,7 @@ class SunDB
     }
 
     /**
-     * Show/print executed query as a string
+     * Shows/Prints the executed query as a string
      */
     public function showQuery() {
         if (empty($this->query)) {
@@ -655,7 +655,7 @@ class SunDB
     }
 
     /**
-     * Method that will return the total record count in a table
+     * Returns the total record count in a table
      *
      * @param string $table
      * @return int
@@ -669,7 +669,7 @@ class SunDB
     }
 
     /**
-     * Method that will return the number of affected rows
+     * Returns the number of affected rows
      *
      * @return int
      */
@@ -678,7 +678,7 @@ class SunDB
     }
 
     /**
-     * Method that will return the value of the auto increment column
+     * Returns the value of the auto increment column
      *
      * @return int
      */
@@ -687,7 +687,7 @@ class SunDB
     }
 
     /**
-     * Method generates user defined function call
+     * Generates user defined function call
      *
      * @param string $func
      * @param string $param

@@ -412,6 +412,6 @@ $db->backup(null, 'show');
 
 Get last executed SQL query:
 ```php
-$sql = $db->showQuery();
-echo 'Last Executed Query: '. $sql;
+$db->showQuery();
 ```
+This code will print the last executed query to the screen.

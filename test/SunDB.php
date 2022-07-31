@@ -1,7 +1,7 @@
 <?php
 
-error_reporting(E_ALL);
-ini_set('display_errors', TRUE);
+//error_reporting(E_ALL);
+//ini_set('display_errors', TRUE);
 
 /**
  * SunDB Class
@@ -75,7 +75,7 @@ class SunDB
     private $table;
 
     /**
-     * Array that holds Where values
+     * Array that holds Insert/Update values
      * @var array
      */
     private $values = [];
@@ -91,6 +91,12 @@ class SunDB
      * @var array
      */
     private $orWhere = [];
+
+    /**
+     * Array that holds Where values
+     * @var array
+     */
+    private $whereValues = [];
 
     /**
      * Dynamic type list for Group By condition value
@@ -112,7 +118,7 @@ class SunDB
 
     /**
      * Limit condition value for SQL query
-     * @var integer
+     * @var string
      */
     private $limit;
 
@@ -134,7 +140,7 @@ class SunDB
      * @param string $username
      * @param string $password
      * @param string $dbname
-     * @param int $port
+     * @param integer $port
      * @param string $charset
      */
     public function __construct($type = null, $host = null, $username = null, $password = null, $dbname = null, $port = null, $charset = null) {
@@ -155,6 +161,13 @@ class SunDB
     }
 
     /**
+     * Close PDO connection
+     */
+    public function __destruct() {
+        $this->pdo = null;
+    }
+
+    /**
      * Create PDO connection
      *
      * @throws exception
@@ -170,7 +183,6 @@ class SunDB
 
         } else if ($this->connectionParams['driver'] == "mssql") {
             $connectionString = 'sqlsrv:Server='.$this->connectionParams['host'].';Database='.$this->connectionParams['dbname'];
-            var_dump($connectionString);
             $this->pdo = new PDO($connectionString, $this->connectionParams['username'], $this->connectionParams['password']);
         } else {
             $connectionString = $this->connectionParams['driver'].':';
@@ -208,6 +220,25 @@ class SunDB
     }
 
     /**
+     * Reset SunDB internal variables
+     */
+    private function reset() {
+        $this->query        = '';
+        $this->action       = '';
+        $this->table        = '';
+        $this->values       = [];
+        $this->where        = [];
+        $this->orWhere      = [];
+        $this->whereValues  = [];
+        $this->groupBy      = '';
+        $this->having       = '';
+        $this->orderBy      = [];
+        $this->limit        = '';
+        $this->lastInsertId = 0;
+        $this->rowCount     = 0;
+    }
+
+    /**
      * Check if table exists
      *
      * @param string $table
@@ -236,13 +267,14 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build a SELECT part of the query
+     * Build a SELECT part of the query
      *
      * @param string $table
      * @param string|array $columns
      * @return object
      */
     public function select($table = null, $columns = '*') {
+        $this->reset();
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkTable) {
             $this->checkTable($table);
         }
@@ -253,12 +285,12 @@ class SunDB
         }
         $this->table = $table;
         $this->action = 'select';
-        $this->query = 'select '.$columns.' from '.$table;
+        $this->query = 'select '.$columns.' from `'.$table.'`';
         return $this;
     }
     
     /**
-     * Abstraction method that will build an INSERT part of the query
+     * Build an INSERT part of the query
      *
      * @param string $table
      * @param array $data
@@ -266,6 +298,7 @@ class SunDB
      * @return object
      */
     public function insert($table = null, $data = []) {
+        $this->reset();
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkTable) {
             $this->checkTable($table);
         }
@@ -275,6 +308,7 @@ class SunDB
         foreach ($data as $key => $value) {
             $keys[] = '`'.$key.'`';
             $alias[] = "?";
+            if (empty($value)) {$value = '';}
             $this->values[] = $value;
         }
         $keys = implode(',', $keys);
@@ -286,7 +320,7 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build an UPDATE part of the query
+     * Build an UPDATE part of the query
      *
      * @param string $table
      * @param string|array $data
@@ -294,6 +328,7 @@ class SunDB
      * @return object
      */
     public function update($table = null, $data = []) {
+        $this->reset();
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkTable) {
             $this->checkTable($table);
         }
@@ -302,6 +337,7 @@ class SunDB
         }
         foreach ($data as $key => $value) {
             $keys[] = '`'.$key.'`=?';
+            if (empty($value)) {$value = '';}
             $this->values[] = $value;
         }
         $keys = implode(',', $keys);
@@ -312,33 +348,35 @@ class SunDB
     }
 
     /**
-     * Abstraction method that will build a DELETE part of the query
+     * Build a DELETE part of the query
      *
      * @param string $table
      * @return object
      */
     public function delete($table = null) {
+        $this->reset();
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkTable) {
             $this->checkTable($table);
         }
         $this->table = $table;
         $this->action = 'delete';
-        $this->query = 'delete from '.$table;
+        $this->query = 'delete from `'.$table.'`';
         return $this;
     }
 
     /**
-     * Abstraction method that will build the WHERE part of the query string (uses AND operator)
+     * Build the AND WHERE part of the query string
      *
      * @param string $column
      * @param string $value
      * @param string $operator
+     * @param string $condition
      * @throws exception
      * @return object
      */
-    public function where($column = null, $value = null, $operator = null) {
+    public function where($column = null, $value = null, $operator = null, $condition = 'and') {
         if (empty($value) && empty($operator)) {
-            $this->where[] = $column;
+            $this->where[] = $condition.' '.$column;
         } else {
             if (empty($column) || empty($operator)) {
                 throw new Exception('Where clause must contain a value and operator.');
@@ -347,19 +385,30 @@ class SunDB
                 $this->checkColumn($column);
             }
             if ($operator == "between" || $operator == "not between") {
-                $this->where[] = '('.$column.' '.$operator.' \''.$value[0].'\' and \''.$value[1].'\')';
+                if (!empty($value[0]) && !empty($value[1])) {
+                    $this->whereValues[] = $value[0];
+                    $this->whereValues[] = $value[1];
+                    $this->where[] = $condition.' (`'.$column.'` '.$operator.' ? and ?)';
+                }
             } else if ($operator == "in" || $operator == "not in") {
-                foreach ($value as $val) {$values[] = "'".$val."'";}
-                $this->where[] = '('.$column.' '.$operator.' ('.implode(',', $values).'))';
+                if (is_array($value) && count($value)>0) {
+                    foreach ($value as $val) {
+                        $values[] = '?';
+                        $this->whereValues[] = $val;
+                    }
+                    $this->where[] = $condition.' (`'.$column.'` '.$operator.' ('.implode(',', $values).'))';
+                }
             } else {
-                $this->where[] = '('.$column.$operator.'\''.$value.'\')';
+                $this->where[] = $condition.' (`'.$column.'`'.$operator.'?) ';
+                if (empty($value)) {$value = '';}
+                $this->whereValues[] = $value;
             }
         }
         return $this;
     }
 
     /**
-     * Abstraction method that will build the WHERE part of the query string (uses OR operator)
+     * Build the OR WHERE part of the query string
      *
      * @param string $column
      * @param string $value
@@ -368,18 +417,11 @@ class SunDB
      * @return object
      */
     public function orWhere($column = null, $value = null, $operator = null) {
-        if (empty($column) || empty($operator)) {
-            throw new Exception('Where clause must contain a value and operator.');
-        }
-        if ($this->connectionParams['driver'] != "sqlite" && $this->checkColumn) {
-            $this->checkColumn($column);
-        }
-        $this->orWhere[] = '('.$column.$operator.'\''.$value.'\')';
-        return $this;
+        return $this->where($column, $value, $operator, 'or');
     }
 
     /**
-     * Abstraction method that will build the GROUP BY part of the WHERE statement
+     * Build the GROUP BY part of the WHERE statement
      *
      * @param string $column
      * @throws exception
@@ -392,12 +434,12 @@ class SunDB
         if ($this->connectionParams['driver'] != "sqlite" && $this->checkColumn) {
             $this->checkColumn($column);
         }
-        $this->groupBy = $column;
+        $this->groupBy = '`'.$column.'`';
         return $this;
     }
 
     /**
-     * Abstraction method that will build the HAVING part of the GROUP BY clause
+     * Build the HAVING part of the GROUP BY clause
      *
      * @param string $value
      * @throws exception
@@ -414,7 +456,7 @@ class SunDB
     }
     
     /**
-     * Abstraction method that will build the ORDER BY part of the WHERE statement
+     * Build the ORDER BY part of the WHERE statement
      *
      * @param string $column
      * @param string $order
@@ -431,23 +473,28 @@ class SunDB
             if ($this->connectionParams['driver'] != "sqlite" && $this->checkColumn) {
                 $this->checkColumn($column);
             }
-            $this->orderBy[] = $column.' '.$order;
+            $this->orderBy[] = '`'.$column.'` '.$order;
         }
         return $this;
     }
 
     /**
-     * Abstraction method that will build the LIMIT part of the WHERE statement
+     * Build the LIMIT part of the WHERE statement
      *
-     * @param integer $limit
+     * @param integer $start
+     * @param integer $page
      * @throws exception
      * @return object
      */
-    public function limit($limit = null) {
-        if (empty($limit) || !is_int($limit)) {
+    public function limit($start = null, $page = null) {
+        if (empty($start) || !is_int($start)) {
             throw new Exception('Limit clause must be 1 or above.');
         }
-        $this->limit = $limit;
+        if (empty($page) || !is_int($page)) {
+            $page=$start;
+            $start=0;
+        }
+        $this->limit = $start.','.$page;
         return $this;
     }
 
@@ -455,33 +502,41 @@ class SunDB
      * Perform SQL query
      *
      * @param string $query
+     * @param array $values
      * @return object
      */
-    public function rawQuery($query = null) {
-        $checkQuery = explode(' ',$query); // for determine the action
-        $this->action = $checkQuery[0];
+    public function rawQuery($query = null, $values = []) {
+        $this->reset();
+        if (is_array($values) && count($values)>0) {
+            foreach ($values as $value) {
+                if (empty($value)) {$value = '';}
+                $this->values[] = $value;
+            }
+        }
+        $this->action = 'query';
         $this->query = $query;
         return $this;
     }
 
     /**
-     * Method that will compile/execute the SQL query and return the result
+     * Compile/Execute the SQL query and return the result
      *
      * @throws exception
      * @return array|object|boolean
      */
     public function run() {
-        if (is_array($this->where) && count($this->where) > 0) {
-            $this->query .= ' where ('.implode(' and ',$this->where).')';// add Where (and) condition
-            if (is_array($this->orWhere) && count($this->orWhere) > 0) { // add Where (and+or) condition
-                $this->query .= ' or (';
-                $this->query .= implode(' or ', $this->orWhere);
-                $this->query .= ')';
+        if (is_array($this->where) && count($this->where) > 0) { // add Where condition
+            $count = 0;
+            $clnWhere = array();
+            foreach ($this->where as $key => $value) { // remove first And/OR part 
+                $count++;
+                if ($count == 1) {
+                    $clnWhere[] = ltrim(ltrim($value, 'or'), 'and');
+                } else {
+                    $clnWhere[] = $value;
+                }
             }
-        } else {
-            if (is_array($this->orWhere) && count($this->orWhere) > 0) { // add Where (or) condition
-                $this->query .= ' where ('.implode(' or ',$this->orWhere).')';
-            }
+            $this->query .= ' where ('.implode(' ', $clnWhere).')';
         }
         if (!empty($this->groupBy)) { // add Group By condition
             $this->query .= ' group by '.$this->groupBy;
@@ -492,13 +547,13 @@ class SunDB
         if (is_array($this->orderBy) && count($this->orderBy) > 0) { // add Order By condition
             $this->query .= ' order by '.implode(',', $this->orderBy);
         }
-        if (is_int($this->limit)) { // add Limit condition
+        if (!empty($this->limit)) { // add Limit condition
             $this->query .= ' limit '.$this->limit;
         }
         switch ($this->action) {
             case 'select': // run Select query and return the result (array|object)
                 $query = $this->pdo()->prepare($this->query);
-                $query->execute(array());
+                $query->execute($this->whereValues);
                 $this->queryResult = $query->fetchAll();
                 if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
                 return $this->queryResult;
@@ -512,14 +567,27 @@ class SunDB
             break;
             case 'update': // run Update query and return the result (bool)
                 $query = $this->pdo()->prepare($this->query);
-                $query->execute($this->values);
+                $query->execute(array_merge($this->values,$this->whereValues));
                 if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
                 return true;
             break;
             case 'delete': // run Delete query and return the result (bool)
-                $query = $this->pdo()->query($this->query);
+                $query = $this->pdo()->prepare($this->query);
+                $query->execute($this->whereValues);
                 if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
                 return true;
+            break;
+            case 'query': // run Raw query and return the result (bool)
+                $query = $this->pdo()->prepare($this->query);
+                $query->execute($this->values);
+                if ($query->rowCount() > 0) {$this->rowCount = $query->rowCount();} // affected row count
+                $exp = explode(' ', $this->query); // for determine the action
+                if ($exp[0] == "select") {
+                    $this->queryResult = $query->fetchAll();
+                    return $this->queryResult;
+                } else {
+                    return true;
+                }
             break;
             default:
                 throw new Exception('Command "'.$this->action.'" is not allowed.');
@@ -528,7 +596,7 @@ class SunDB
     }
 
     /**
-     * Method that will backup the database and print/download backup file
+     * Perform backup the database and print/download backup file
      *
      * @param string $file
      * @param string $type
@@ -576,7 +644,7 @@ class SunDB
     }
 
     /**
-     * Show/print executed query as a string
+     * Show/Print executed query as a string
      */
     public function showQuery() {
         if (empty($this->query)) {
@@ -587,7 +655,7 @@ class SunDB
     }
 
     /**
-     * Method that will return the total record count in a table
+     * Return the total record count in a table
      *
      * @param string $table
      * @return int
@@ -601,7 +669,7 @@ class SunDB
     }
 
     /**
-     * Method that will return the number of affected rows
+     * Return the number of affected rows
      *
      * @return int
      */
@@ -610,7 +678,7 @@ class SunDB
     }
 
     /**
-     * Method that will return the value of the auto increment column
+     * Return the value of the auto increment column
      *
      * @return int
      */
@@ -619,7 +687,7 @@ class SunDB
     }
 
     /**
-     * Method generates user defined function call
+     * Generate user defined function call
      *
      * @param string $func
      * @param string $param

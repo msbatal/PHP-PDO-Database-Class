@@ -402,10 +402,16 @@ Download the whole database (tables and records) as an SQL file:
 $db->backup('fileName', 'save');
 // File: fileName.sql
 ```
+Don't forget to use this code on an empty page. Otherwise, you can see an HTML page into an SQL file.
 
 Show the whole database (tables and records) as an SQL query:
 ```php
 $db->backup(null, 'show');
+```
+
+Download/Show the whole database (with exclude some tables) as an SQL query:
+```php
+$db->backup(null, 'save', ['table1', 'table2']); // or 'show' action
 ```
 
 ### Helper Methods

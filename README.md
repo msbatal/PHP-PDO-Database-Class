@@ -18,6 +18,7 @@ SunDB is a PHP PDO database class that utilizes PDO and prepared statements (MyS
 - **[Having Method](#having-method)**
 - **[Raw SQL Queries](#raw-sql-queries)**
 - **[Backup Database](#backup-database)**
+- **[Maintaining Database](#maintaining-database)**
 - **[Helper Methods](#helper-methods)**
 
 ### Installation
@@ -412,6 +413,24 @@ $db->backup(null, 'show');
 Download/Show the whole database (with exclude some tables) as an SQL query:
 ```php
 $db->backup(null, 'save', ['table1', 'table2']); // or 'show' action
+```
+
+### Maintaining Database
+
+Analyze, check, optimize and repair the whole database (tables and records):
+```php
+$db->maintenance();
+```
+
+or
+
+```php
+$maintenance = $db->maintenance();
+if ($maintenance) {
+    echo 'Maintenance successfully!';
+} else {
+    echo 'Maintenance failed!';
+}
 ```
 
 ### Helper Methods

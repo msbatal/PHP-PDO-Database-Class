@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.5.0
+ * @version   2.5.1
  */
 
 class SunDB
@@ -190,10 +190,12 @@ class SunDB
         $this->pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
         $this->pdo->setAttribute(\PDO::ATTR_CURSOR, \PDO::CURSOR_SCROLL);
         $this->pdo->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_EMPTY_STRING);
+        $this->pdo->setAttribute(\PDO::ATTR_PERSISTENT, true);
         if ($this->connectionParams['driver'] == 'mysql') {
-          $this->pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
+          $this->pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
           $this->pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
           $this->pdo->setAttribute(\PDO::MYSQL_ATTR_FOUND_ROWS, true);
+          $this->pdo->setAttribute(\PDO::MYSQL_ATTR_INIT_COMMAND, 'SET CHARACTER SET utf8, NAMES utf8');
         }
         if (!($this->pdo instanceof \PDO)) {
             throw new \Exception('This object is not an instance of PDO.');
@@ -652,6 +654,7 @@ class SunDB
     /**
      * Analyze, check, optimize and repair tables
      * 
+     * @throws exception
      * @return boolean
      */
     public function maintenance() {
@@ -664,10 +667,14 @@ class SunDB
         }
         if (count($tables) > 0) {
             $tables = implode(', ', $tables);
-            $analyze = $this->pdo()->query("analyze table $tables")->fetchAll(); // analyze tables
-            $check = $this->pdo()->query("check table $tables")->fetchAll(); // check tables
-            $optimize = $this->pdo()->query("optimize table $tables")->fetchAll(); // optimize tables
-            $repair = $this->pdo()->query("repair table $tables")->fetchAll(); // repair tables
+            try {
+                $analyze = $this->pdo()->query("analyze table $tables"); // analyze tables
+                $check = $this->pdo()->query("check table $tables"); // check tables
+                $optimize = $this->pdo()->query("optimize table $tables"); // optimize tables
+                $repair = $this->pdo()->query("repair table $tables"); // repair tables
+            } catch (Exception $e) {
+                throw new \Exception($e->getMessage());
+            }
             if ($analyze && $check && $optimize && $repair) {
                 return true;
             } else {
@@ -702,7 +709,7 @@ class SunDB
      * Return the total record count in a table
      *
      * @param string $table
-     * @return int
+     * @return integer
      */
     public function tableCount($table = null) {
         if ($this->connectionParams['driver'] != 'sqlite' && $this->checkTable) {
@@ -715,7 +722,7 @@ class SunDB
     /**
      * Return the number of affected rows
      *
-     * @return int
+     * @return integer
      */
     public function rowCount(){
         return (int) $this->rowCount;
@@ -724,7 +731,7 @@ class SunDB
     /**
      * Return the value of the auto increment column
      *
-     * @return int
+     * @return integer
      */
     public function lastInsertId() {
         return (int) $this->lastInsertId;

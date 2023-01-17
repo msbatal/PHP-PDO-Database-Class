@@ -342,6 +342,13 @@ echo $select['column'];
 ```
 
 ```php
+$select = $db->select('tableName', ['column'])->limit(5, 4)->run();
+// Gives: SELECT column FROM tableName LIMIT 5,4;
+
+echo $select['column'];
+```
+
+```php
 $delete = $db->delete('tableName')
              ->where('column', 'value', '>')
              ->orderBy('column', 'desc')

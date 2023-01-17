@@ -196,7 +196,7 @@ or select just one row
 $select = $db->select('tableName')->where('column', 'value', '=')->run();
 // Gives: SELECT * FROM tableName WHERE column='value';
 
-echo $select[0]['column'];
+echo $select['column'];
 ```
 
 or select one column value or function result
@@ -205,12 +205,12 @@ or select one column value or function result
 $select = $db->select('tableName', ['column'])->limit(1)->run();
 // Gives: SELECT column FROM tableName LIMIT 1;
 
-echo $select[0]['column'];
+echo $select['column'];
 
 $select = $db->select('tableName', ['count(*) as total'])->run();
 // Gives: SELECT count(*) as total FROM tableName;
 
-echo $select[0]['total'];
+echo $select['total'];
 ```
 
 ### Where Method
@@ -327,7 +327,7 @@ $select = $db->select('tableName', ['column1', 'column2'])
 $select = $db->select('tableName', ['column'])->limit(1)->run();
 // Gives: SELECT column FROM tableName LIMIT 1;
 
-echo $select[0]['column'];
+echo $select['column'];
 ```
 
 ```php

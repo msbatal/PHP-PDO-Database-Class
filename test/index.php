@@ -27,6 +27,7 @@
     }
     */
 
+
     /*
     // Example for Insert Query Only with Values
     $data = [Null, rand(1111,9999), rand(1111,9999)]; // don't forget to send parameters in same order created in the table

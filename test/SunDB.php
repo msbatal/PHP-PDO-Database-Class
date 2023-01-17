@@ -325,7 +325,6 @@ class SunDB
         } else {
             $this->query = 'insert into `'.$table.'` values ('.$strAlias.')';
         }
-        var_dump($this->query); echo "<br><br>"; var_dump($this->values); die();
         return $this;
     }
 

@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.5.1
+ * @version   2.5.2
  */
 
 class SunDB
@@ -60,13 +60,19 @@ class SunDB
     private $query;
 
     /**
+     * Array that holds query result
+     * @var array
+     */
+    private $queryResult;
+
+    /**
      * Action for query string
      * @var string
      */
     private $action;
 
     /**
-     * table name
+     * Table name
      * @var string
      */
     private $table;
@@ -310,11 +316,15 @@ class SunDB
             if (empty($value)) {$value = '';}
             $this->values[] = $value;
         }
-        $keys = implode(',', $keys);
-        $alias = implode(',', $alias);
+        $strKeys = implode(',', $keys);
+        $strAlias = implode(',', $alias);
         $this->table = $table;
         $this->action = 'insert';
-        $this->query = 'insert into `'.$table.'` ('.$keys.') values ('.$alias.')';
+        if (is_int($keys[0])) {
+            $this->query = 'insert into `'.$table.'` ('.$strKeys.') values ('.$strAlias.')';
+        } else {
+            $this->query = 'insert into `'.$table.'` values ('.$strAlias.')';
+        }
         return $this;
     }
 
@@ -556,7 +566,11 @@ class SunDB
                 $this->queryResult = $query->fetchAll();
                 $this->rowCount = $query->rowCount(); // affected row count
                 $query->closeCursor(); unset($query);
-                return $this->queryResult;
+                if ($this->rowCount == 1) {
+                    return $this->queryResult[0];
+                } else {
+                    return $this->queryResult;
+                }
             break;
             case 'insert': // run Insert query and return the result (bool)
                 $query = $this->pdo()->prepare($this->query);

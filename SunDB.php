@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.5.2
+ * @version   2.5.3
  */
 
 class SunDB
@@ -313,7 +313,7 @@ class SunDB
         foreach ($data as $key => $value) {
             $keys[] = '`'.$key.'`';
             $alias[] = '?';
-            if (empty($value)) {$value = '';}
+            if (empty($value)) {$value = NULL;}
             $this->values[] = $value;
         }
         $strKeys = implode(',', $keys);
@@ -325,6 +325,7 @@ class SunDB
         } else {
             $this->query = 'insert into `'.$table.'` values ('.$strAlias.')';
         }
+        var_dump($this->query); echo "<br><br>"; var_dump($this->values); die();
         return $this;
     }
 

@@ -19,8 +19,17 @@
 
 
     /*
-    // Example for Insert Query
+    // Example for Insert Query with Keys and Values
     $data = ['id' => Null, 'name' => rand(1111,9999), 'surname' => rand(1111,9999)];
+    $insert = $db->insert('users', $data)->run();
+    if ($insert) {
+        echo 'Record inserted successfully! ID: '.$db->lastInsertId();
+    }
+    */
+
+    /*
+    // Example for Insert Query Only with Values
+    $data = [Null, rand(1111,9999), rand(1111,9999)]; // don't forget to send parameters in same order created in the table
     $insert = $db->insert('users', $data)->run();
     if ($insert) {
         echo 'Record inserted successfully! ID: '.$db->lastInsertId();

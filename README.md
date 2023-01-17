@@ -77,7 +77,7 @@ $db = new SunDB($pdo);
 
 ### Insert Query
 
-Simple example
+Simple example with keys and values
 ```php
 $data = [
     'column1' => 'Value 1',
@@ -86,6 +86,17 @@ $data = [
 ];
 $insert = $db->insert('tableName', $data)->run();
 // Gives: INSERT INTO tableName (column1, column2, column3) VALUES ('Value 1', 'Value 2', 'Value3');
+
+if ($insert) {
+    echo 'Record inserted successfully! ID: '.$db->lastInsertId();
+}
+```
+
+Simple example only with values
+```php
+$insert = $db->insert('tableName', [NULL, 'Value 2', 'Value 3'])->run();
+// Don't forget to send parameters in same order created in the table
+// Gives: INSERT INTO tableName VALUES (NULL, 'Value 2', 'Value3');
 
 if ($insert) {
     echo 'Record inserted successfully! ID: '.$db->lastInsertId();

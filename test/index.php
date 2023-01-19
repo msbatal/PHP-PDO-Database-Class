@@ -6,9 +6,34 @@
 
     //$db = new SunDB(['driver' => 'sqlite', 'url' => 'test.sqlite']);
 
-    // Example for Select Query
+    // Example for Select Query (Single Row)
+    $select = $db->select('users', ['id', 'name', 'surname'])->orderBy('id', 'desc')->first()->run(); // add "->first()", "->last()", "->random()"  before "->run"
+    echo 'ID: '. $select['id'].'<br>'.'Name: '.$select['name'].'<br>'.'Surname: '.$select['surname'];
+
+
+    /*
+    // Example for Select Query (Single Row)
+    $select = $db->select('users', ['id', 'name', 'surname'])->orderBy('id', 'desc')->run();
+    $result = $select[0];
+    echo 'ID: '. $result['id'].'<br>'.'Name: '.$result['name'].'<br>'.'Surname: '.$result['surname'];
+    */
+
+
+    /*
+    // Example for Select Query (Single Row)
+    $select = $db->select('users', ['id', 'name', 'surname'])->orderBy('id', 'desc')->run();
+    foreach ($select as $rows) { 
+        echo 'ID: '. $rows['id'].'<br>'.'Name: '.$rows['name'].'<br>'.'Surname: '.$rows['surname'];
+        echo '<br><br>';
+    }
+    */
+
+
+    /*
+    // Example for Select Query (Multiple Row)
     $cols = ['id', 'name', 'surname'];
-    $select = $db->select('users', $cols)->orderBy('id', 'desc')->run();
+    $select = $db->select('users', $cols)->orderBy('id', 'desc')->run(); // or add "->all()" before "->run"
+    // $select = $db->select('users', $cols)->orderBy('id', 'desc')->all()->run();
     if ($select) {
         echo '<b>'.$db->rowCount().' rows found.</b><br><br>';
         foreach ($select as $rows) { 
@@ -16,6 +41,7 @@
             echo '<br><br>';
         }
     }
+    */
 
 
     /*

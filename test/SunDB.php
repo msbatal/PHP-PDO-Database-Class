@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.5.3
+ * @version   2.5.4
  */
 
 class SunDB
@@ -148,7 +148,7 @@ class SunDB
      */
     public function __construct($type = null, $host = null, $username = null, $password = null, $dbname = null, $port = null, $charset = null) {
         set_exception_handler(function($exception) {
-            echo '<b>[SunDB] Exception:</b> '.$exception->getMessage();
+            echo '<b>[SunClass] Exception:</b> '.$exception->getMessage();
         });
         if (is_array($type)) { // connect to db using parameters in the array
             $this->connectionParams = $type;
@@ -715,7 +715,16 @@ class SunDB
         if (empty($this->query)) {
             echo '<b>[SunDB] Error:</b> SQL query not found.';
         } else {
-            echo '<p><b>[SunDB] Query:</b> '.$this->query.'</p>';
+            if ($this->action == 'query') {
+                echo '<p><b>[SunDB] Query:</b> ' . $this->query . '</p>';
+            } else {
+                $queryArray = explode('?', $this->query);
+                for ($i = 0; $i < count($queryArray)-1; $i++) {
+                    $result .= $queryArray[$i] . "'" . $this->whereValues[$i] . "'";
+                }
+                $result .= $queryArray[count($queryArray)-1];
+                echo '<p><b>[SunDB] Query:</b> ' . $result . '</p>';
+            }
         }
     }
 
@@ -761,7 +770,7 @@ class SunDB
      */
     public function func($func = null, $param = null) {
         if (empty($func) || empty($param)) {
-            throw new \Exception('Missing parameters for "'.$func.'" function.');
+            throw new \Exception('Missing parameters for "' . $func . '" function.');
         }
         return $func($param);
     }

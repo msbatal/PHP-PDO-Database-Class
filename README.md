@@ -128,6 +128,8 @@ if ($db->rowCount() > 0) {
 }
 ```
 
+Insert query returns `true` or `false` result. Also, you can get the affected (inserted) rows by using `rowCount()` method. If you need last inserted record's id, you may use `lastInsertId()` method.
+
 ### Update Query
 
 ```php
@@ -160,6 +162,8 @@ $update = $db->update('tableName', $data)
 // Gives: UPDATE tableName SET ... WHERE column > value ORDER BY column DESC LIMIT 2;
 ```
 
+Update query returns `true` or `false` result. Also, you can get the affected (updated) rows by using `rowCount()` method. If you don't make changes in column contents (sending same values to db), rowCount() will return a `Zero (0)` value. So, please think twice about controlling the results; true/false or affected row count?
+
 ### Delete Query
 
 ```php
@@ -175,6 +179,8 @@ if ($db->rowCount() > 0) {
     echo 'Delete failed!';
 }
 ```
+
+Delete query returns `true` or `false` result. Also, you can get the affected (deleted) rows by using `rowCount()` method.
 
 ### Select Query
 
@@ -204,7 +210,7 @@ if ($select) {
 or select just one row
 
 ```php
-$select = $db->select('tableName')->where('column', 'value', '=')->run();
+$select = $db->select('tableName')->where('column', 'value', '=')->first()->run();
 // Gives: SELECT * FROM tableName WHERE column='value';
 
 echo $select['column'];
@@ -213,16 +219,30 @@ echo $select['column'];
 or select one column value or function result
 
 ```php
-$select = $db->select('tableName', ['column'])->limit(1)->run();
+$select = $db->select('tableName', ['column'])->limit(1)->first()->run();
 // Gives: SELECT column FROM tableName LIMIT 1;
 
 echo $select['column'];
 
-$select = $db->select('tableName', ['count(*) as total'])->run();
+$select = $db->select('tableName', ['count(*) as total'])->first()->run();
 // Gives: SELECT count(*) as total FROM tableName;
 
 echo $select['total'];
 ```
+
+or you may use these two alternatives to select a single row
+
+```php
+$select = $db->select('tableName')->run();
+echo $select[0]['column']; // alternative 1 (use '0' key between query variable and column key)
+
+$select = $db->select('tableName')->run();
+foreach ($select as $row) { 
+    echo $row['column']; // alternative 2 (use 'foreach' like a multiple selection)
+}
+```
+
+If you need a single row and don't want to use a loop function, don't forget to use `first()`, `last()` or `random()` methods before `run()` method.
 
 ### Where Method
 
@@ -413,6 +433,8 @@ foreach ($select as $rows) {
     print_r($rows);
 }
 ```
+
+If you use Insert, Update or Delete commands, Raw SQL query returns `true` or `false` result. If you use Select command, it will return an array/object containing the selected row(s).
 
 ### Backup Database
 

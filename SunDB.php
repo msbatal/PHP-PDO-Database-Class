@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.5.4
+ * @version   2.6.0
  */
 
 class SunDB
@@ -70,6 +70,12 @@ class SunDB
      * @var string
      */
     private $action;
+
+    /**
+     * Record order to be selected
+     * @var string
+     */
+    private $which;
 
     /**
      * Table name
@@ -230,6 +236,7 @@ class SunDB
     private function reset() {
         $this->query        = '';
         $this->action       = '';
+        $this->which        = '';
         $this->table        = '';
         $this->values       = [];
         $this->where        = [];
@@ -516,7 +523,7 @@ class SunDB
      */
     public function rawQuery($query = null, $values = []) {
         $this->reset();
-        if (is_array($values) && count($values)>0) {
+        if (is_array($values) && count($values) > 0) {
             foreach ($values as $value) {
                 if (empty($value)) {$value = '';}
                 $this->values[] = $value;
@@ -524,6 +531,46 @@ class SunDB
         }
         $this->action = 'query';
         $this->query = $query;
+        return $this;
+    }
+
+    /**
+     * Return the first record
+     *
+     * @return object
+     */
+    public function first() {
+        $this->which = 'first';
+        return $this;
+    }
+
+    /**
+     * Return the last record
+     *
+     * @return object
+     */
+    public function last() {
+        $this->which = 'last';
+        return $this;
+    }
+
+    /**
+     * Return a random record
+     *
+     * @return object
+     */
+    public function random() {
+        $this->which = 'random';
+        return $this;
+    }
+
+    /**
+     * Return all records
+     *
+     * @return object
+     */
+    public function all() {
+        $this->which = 'all';
         return $this;
     }
 
@@ -564,18 +611,23 @@ class SunDB
                 $query = $this->pdo()->prepare($this->query);
                 $result = $query->execute($this->whereValues);
                 $this->queryResult = $query->fetchAll();
-                $this->rowCount = $query->rowCount(); // affected row count
+                $this->rowCount = $query->rowCount(); // selected row count
                 $query->closeCursor(); unset($query);
-                if ($this->rowCount == 1) {
-                    return $this->queryResult[0];
+                if ($this->which == 'first') {
+                    return $this->queryResult[0]; // return only first record
+                } else if ($this->which == 'last') {
+                    return $this->queryResult[-1]; // return only last record
+                } else if ($this->which == 'random') {
+                    $index = rand(0, $this->rowCount - 1);
+                    return $this->queryResult[$index]; // return a random record
                 } else {
-                    return $this->queryResult;
+                    return $this->queryResult; // return all records
                 }
             break;
             case 'insert': // run Insert query and return the result (bool)
                 $query = $this->pdo()->prepare($this->query);
                 $result = $query->execute($this->values);
-                $this->rowCount = $query->rowCount(); // affected row count
+                $this->rowCount = $query->rowCount(); // inserted row count
                 $this->lastInsertId = $this->pdo()->lastInsertId(); // auto increment value
                 $query->closeCursor(); unset($query);
                 return $result;
@@ -583,14 +635,14 @@ class SunDB
             case 'update': // run Update query and return the result (bool)
                 $query = $this->pdo()->prepare($this->query);
                 $result = $query->execute(array_merge($this->values,$this->whereValues));
-                $this->rowCount = $query->rowCount(); // affected row count
+                $this->rowCount = $query->rowCount(); // updated row count
                 $query->closeCursor(); unset($query);
                 return $result;
             break;
             case 'delete': // run Delete query and return the result (bool)
                 $query = $this->pdo()->prepare($this->query);
                 $result = $query->execute($this->whereValues);
-                $this->rowCount = $query->rowCount(); // affected row count
+                $this->rowCount = $query->rowCount(); // deleted row count
                 $query->closeCursor(); unset($query);
                 return $result;
             break;

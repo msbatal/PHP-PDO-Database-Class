@@ -148,7 +148,7 @@ class SunDB
      */
     public function __construct($type = null, $host = null, $username = null, $password = null, $dbname = null, $port = null, $charset = null) {
         set_exception_handler(function($exception) {
-            echo '<b>[SunClass] Exception:</b> '.$exception->getMessage();
+            echo '<b>[SunClass] Exception:</b> ' . $exception->getMessage();
         });
         if (is_array($type)) { // connect to db using parameters in the array
             $this->connectionParams = $type;
@@ -179,14 +179,14 @@ class SunDB
             $this->pdo = new \PDO($connectionString);
 
         } else if ($this->connectionParams['driver'] == 'mssql') {
-            $connectionString = 'sqlsrv:Server='.$this->connectionParams['host'].';Database='.$this->connectionParams['dbname'];
+            $connectionString = 'sqlsrv:Server=' . $this->connectionParams['host'] . ';Database=' . $this->connectionParams['dbname'];
             $this->pdo = new \PDO($connectionString, $this->connectionParams['username'], $this->connectionParams['password']);
         } else {
-            $connectionString = $this->connectionParams['driver'].':';
+            $connectionString = $this->connectionParams['driver'] . ':';
             $connectionParams = ['host', 'dbname', 'port', 'charset'];
             foreach ($connectionParams as $connectionParam) {
                 if (!empty($this->connectionParams[$connectionParam])) {
-                    $connectionString .= $connectionParam.'='.$this->connectionParams[$connectionParam].';';
+                    $connectionString .= $connectionParam . '=' . $this->connectionParams[$connectionParam] . ';';
                 }
             }
             $connectionString = rtrim($connectionString, ';');
@@ -251,9 +251,9 @@ class SunDB
      * @return boolean
      */
     private function checkTable($table = null) {
-        $result = $this->pdo()->query("SHOW TABLES LIKE '".$table."'");
+        $result = $this->pdo()->query("SHOW TABLES LIKE '" . $table . "'");
         if ($result->rowCount() != 1) {
-            throw new \Exception('Table "'.$table.'" does not exist.');
+            throw new \Exception('Table "' . $table . '" does not exist.');
         }
     }
 
@@ -265,9 +265,9 @@ class SunDB
      * @return boolean
      */
     private function checkColumn($column = null) {
-        $result = $this->pdo()->query("SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '".$this->connectionParams['dbname']."' AND TABLE_NAME = '".$this->table."' AND COLUMN_NAME = '".$column."'");
+        $result = $this->pdo()->query("SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '" . $this->connectionParams['dbname'] . "' AND TABLE_NAME = '" . $this->table . "' AND COLUMN_NAME = '" . $column . "'");
         if ($result->rowCount() != 1) {
-            throw new \Exception('Column "'.$column.'" does not exist.');
+            throw new \Exception('Column "' . $column . '" does not exist.');
         }
     }
 
@@ -290,7 +290,7 @@ class SunDB
         }
         $this->table = $table;
         $this->action = 'select';
-        $this->query = 'select '.$columns.' from `'.$table.'`';
+        $this->query = 'select ' . $columns . ' from `' . $table . '`';
         return $this;
     }
     
@@ -311,7 +311,7 @@ class SunDB
             throw new \Exception('Insert clause must contain an array data.');
         }
         foreach ($data as $key => $value) {
-            $keys[] = '`'.$key.'`';
+            $keys[] = '`' . $key . '`';
             $alias[] = '?';
             if (empty($value)) {$value = NULL;}
             $this->values[] = $value;
@@ -321,9 +321,9 @@ class SunDB
         $this->table = $table;
         $this->action = 'insert';
         if (is_int($keys[0])) {
-            $this->query = 'insert into `'.$table.'` ('.$strKeys.') values ('.$strAlias.')';
+            $this->query = 'insert into `' . $table . '` (' . $strKeys . ') values (' . $strAlias . ')';
         } else {
-            $this->query = 'insert into `'.$table.'` values ('.$strAlias.')';
+            $this->query = 'insert into `' . $table . '` values (' . $strAlias . ')';
         }
         return $this;
     }
@@ -345,14 +345,14 @@ class SunDB
             throw new \Exception('Update clause must contain an array data.');
         }
         foreach ($data as $key => $value) {
-            $keys[] = '`'.$key.'`=?';
+            $keys[] = '`' . $key . '`=?';
             if (empty($value)) {$value = '';}
             $this->values[] = $value;
         }
         $keys = implode(',', $keys);
         $this->table = $table;
         $this->action = 'update';
-        $this->query = 'update `'.$table.'` set '.$keys;
+        $this->query = 'update `' . $table . '` set ' . $keys;
         return $this;
     }
 
@@ -369,7 +369,7 @@ class SunDB
         }
         $this->table = $table;
         $this->action = 'delete';
-        $this->query = 'delete from `'.$table.'`';
+        $this->query = 'delete from `' . $table . '`';
         return $this;
     }
 
@@ -385,7 +385,7 @@ class SunDB
      */
     public function where($column = null, $value = null, $operator = null, $condition = 'and') {
         if (empty($value) && empty($operator)) {
-            $this->where[] = $condition.' '.$column;
+            $this->where[] = $condition . ' ' . $column;
         } else {
             if (empty($column) || empty($operator)) {
                 throw new \Exception('Where clause must contain a value and operator.');
@@ -397,7 +397,7 @@ class SunDB
                 if (!empty($value[0]) && !empty($value[1])) {
                     $this->whereValues[] = $value[0];
                     $this->whereValues[] = $value[1];
-                    $this->where[] = $condition.' (`'.$column.'` '.$operator.' ? and ?)';
+                    $this->where[] = $condition . ' (`' . $column . '` ' . $operator . ' ? and ?)';
                 }
             } else if ($operator == 'in' || $operator == 'not in') {
                 if (is_array($value) && count($value)>0) {
@@ -405,10 +405,10 @@ class SunDB
                         $values[] = '?';
                         $this->whereValues[] = $val;
                     }
-                    $this->where[] = $condition.' (`'.$column.'` '.$operator.' ('.implode(',', $values).'))';
+                    $this->where[] = $condition.' (`' . $column . '` ' . $operator . ' (' . implode(',', $values) . '))';
                 }
             } else {
-                $this->where[] = $condition.' (`'.$column.'`'.$operator.'?) ';
+                $this->where[] = $condition.' (`' . $column . '`' . $operator . '?) ';
                 if (empty($value)) {$value = '';}
                 $this->whereValues[] = $value;
             }
@@ -443,7 +443,7 @@ class SunDB
         if ($this->connectionParams['driver'] != 'sqlite' && $this->checkColumn) {
             $this->checkColumn($column);
         }
-        $this->groupBy = '`'.$column.'`';
+        $this->groupBy = '`' . $column . '`';
         return $this;
     }
 
@@ -482,7 +482,7 @@ class SunDB
             if ($this->connectionParams['driver'] != 'sqlite' && $this->checkColumn) {
                 $this->checkColumn($column);
             }
-            $this->orderBy[] = '`'.$column.'` '.$order;
+            $this->orderBy[] = '`' . $column . '` ' . $order;
         }
         return $this;
     }
@@ -503,7 +503,7 @@ class SunDB
             $page = $start;
             $start = 0;
         }
-        $this->limit = $start.','.$page;
+        $this->limit = $start . ',' . $page;
         return $this;
     }
 
@@ -545,19 +545,19 @@ class SunDB
                     $clnWhere[] = $value;
                 }
             }
-            $this->query .= ' where '.implode('', $clnWhere).'';
+            $this->query .= ' where ' . implode('', $clnWhere) . '';
         }
         if (!empty($this->groupBy)) { // add Group By condition
-            $this->query .= ' group by '.$this->groupBy;
+            $this->query .= ' group by ' . $this->groupBy;
         }
         if (!empty($this->groupBy) && !empty($this->having)) { // add Having condition
-            $this->query .= ' having '.$this->having;
+            $this->query .= ' having ' . $this->having;
         }
         if (is_array($this->orderBy) && count($this->orderBy) > 0) { // add Order By condition
-            $this->query .= ' order by '.implode(',', $this->orderBy);
+            $this->query .= ' order by ' . implode(',', $this->orderBy);
         }
         if (!empty($this->limit)) { // add Limit condition
-            $this->query .= ' limit '.$this->limit;
+            $this->query .= ' limit ' . $this->limit;
         }
         switch ($this->action) {
             case 'select': // run Select query and return the result (array|object)
@@ -609,7 +609,7 @@ class SunDB
                 }
             break;
             default:
-                throw new \Exception('Command "'.$this->action.'" is not allowed.');
+                throw new \Exception('Command "' . $this->action . '" is not allowed.');
             break;
         }
     }
@@ -738,7 +738,7 @@ class SunDB
         if ($this->connectionParams['driver'] != 'sqlite' && $this->checkTable) {
             $this->checkTable($table);
         }
-        $query = $this->pdo()->query('select count(*) as total from '.$table)->fetchAll();
+        $query = $this->pdo()->query('select count(*) as total from ' . $table)->fetchAll();
         return (int) $query[0]['total'];
     }
 

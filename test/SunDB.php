@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.6.2
+ * @version   2.6.3
  */
 
 class SunDB
@@ -443,14 +443,18 @@ class SunDB
      * @throws exception
      * @return object
      */
-    public function groupBy($column = null) {
+    public function groupBy($column = null, $function = null) {
         if (empty($column)) {
             throw new \Exception('Group By clause must contain a column name.');
         }
         if ($this->connectionParams['driver'] != 'sqlite' && $this->checkColumn) {
             $this->checkColumn($column);
         }
-        $this->groupBy = '`' . $column . '`';
+        if (!empty($function)) {
+            $this->groupBy = $function . '(`' . $column . '`)';
+        } else {
+            $this->groupBy = '`' . $column . '`';
+        }
         return $this;
     }
 

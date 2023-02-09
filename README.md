@@ -391,9 +391,18 @@ if ($db->rowCount() > 0) {
 ```php
 $select = $db->select('tableName')
              ->groupBy('column')
-             ->having('column')
              ->run();
 // Gives: SELECT * FROM tableName GROUP BY column;
+```
+
+Also you can use functions with `groupBy()` method:
+
+```php
+$select = $db->select('tableName', 'count(column) as count')
+             ->groupBy('column', 'DAYNAME')
+             ->orderby('count(column)', 'desc')
+             ->run();
+// Gives: SELECT count(column) as count FROM tableName GROUP BY DAYNAME(column) ORDER BY count(column) DESC;
 ```
 
 ### Having Method

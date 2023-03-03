@@ -620,7 +620,7 @@ class SunDB
                 if ($this->which == 'first') {
                     return $this->queryResult[0]; // return only first record
                 } else if ($this->which == 'last') {
-                    return $this->queryResult[-1]; // return only last record
+                    return end($this->queryResult); // return only last record
                 } else if ($this->which == 'random') {
                     $index = rand(0, $this->rowCount - 1);
                     return $this->queryResult[$index]; // return a random record

@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.6.3
+ * @version   2.6.4
  */
 
 class SunDB
@@ -353,7 +353,7 @@ class SunDB
         }
         foreach ($data as $key => $value) {
             $keys[] = '`' . $key . '`=?';
-            if (empty($value)) {$value = '';}
+            if ($value === NULL) {$value = '';}
             $this->values[] = $value;
         }
         $keys = implode(',', $keys);
@@ -416,7 +416,7 @@ class SunDB
                 }
             } else {
                 $this->where[] = $condition.' (`' . $column . '`' . $operator . '?) ';
-                if (empty($value)) {$value = '';}
+                if ($value === NULL) {$value = '';}
                 $this->whereValues[] = $value;
             }
         }
@@ -529,7 +529,7 @@ class SunDB
         $this->reset();
         if (is_array($values) && count($values) > 0) {
             foreach ($values as $value) {
-                if (empty($value)) {$value = '';}
+                if ($value === NULL) {$value = '';}
                 $this->values[] = $value;
             }
         }

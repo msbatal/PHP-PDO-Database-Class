@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.6.4
+ * @version   2.6.5
  */
 
 class SunDB
@@ -400,11 +400,15 @@ class SunDB
             if ($this->connectionParams['driver'] != 'sqlite' && $this->checkColumn) {
                 $this->checkColumn($column);
             }
-            if ($operator == 'between' || $operator == 'not between') {
+            if ($operator == 'like' || $operator == 'not like') {
+                $this->where[] = $condition . ' (`' . $column . '` ' . $operator . '?) ';
+                if ($value === NULL) {$value = '';}
+                $this->whereValues[] = $value;
+            } else if ($operator == 'between' || $operator == 'not between') {
                 if (!empty($value[0]) && !empty($value[1])) {
                     $this->whereValues[] = $value[0];
                     $this->whereValues[] = $value[1];
-                    $this->where[] = $condition . ' (`' . $column . '` ' . $operator . ' ? and ?)';
+                    $this->where[] = $condition . ' (`' . $column . '` ' . $operator . ' ? and ?) ';
                 }
             } else if ($operator == 'in' || $operator == 'not in') {
                 if (is_array($value) && count($value)>0) {
@@ -412,10 +416,10 @@ class SunDB
                         $values[] = '?';
                         $this->whereValues[] = $val;
                     }
-                    $this->where[] = $condition.' (`' . $column . '` ' . $operator . ' (' . implode(',', $values) . '))';
+                    $this->where[] = $condition . ' (`' . $column . '` ' . $operator . ' (' . implode(',', $values) . ')) ';
                 }
             } else {
-                $this->where[] = $condition.' (`' . $column . '`' . $operator . '?) ';
+                $this->where[] = $condition . ' (`' . $column . '` ' . $operator . '?) ';
                 if ($value === NULL) {$value = '';}
                 $this->whereValues[] = $value;
             }
@@ -443,7 +447,7 @@ class SunDB
      * @throws exception
      * @return object
      */
-    public function groupBy($column = null, $function = null) {
+    public function groupBy($function = null, $column = null) {
         if (empty($column)) {
             throw new \Exception('Group By clause must contain a column name.');
         }

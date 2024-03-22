@@ -447,7 +447,7 @@ class SunDB
      * @throws exception
      * @return object
      */
-    public function groupBy($function = null, $column = null) {
+    public function groupBy($column = null, $function = null) {
         if (empty($column)) {
             throw new \Exception('Group By clause must contain a column name.');
         }

@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.6.6
+ * @version   2.6.7
  */
 
 class SunDB
@@ -183,7 +183,6 @@ class SunDB
         if ($this->connectionParams['driver'] == 'sqlite') {
             $connectionString = 'sqlite:' . $this->connectionParams['url'];
             $this->pdo = new \PDO($connectionString);
-
         } else if ($this->connectionParams['driver'] == 'mssql') {
             $connectionString = 'sqlsrv:Server=' . $this->connectionParams['host'] . ';Database=' . $this->connectionParams['dbname'];
             $this->pdo = new \PDO($connectionString, $this->connectionParams['username'], $this->connectionParams['password']);
@@ -401,7 +400,7 @@ class SunDB
                 $this->checkColumn($column);
             }
             if ($operator == 'like' || $operator == 'not like') {
-                $this->where[] = $condition . ' (`' . $column . '` ' . $operator . '?) ';
+                $this->where[] = $condition . ' (`' . $column . '` ' . $operator . ' ?) ';
                 if ($value === NULL) {$value = '';}
                 $this->whereValues[] = $value;
             } else if ($operator == 'between' || $operator == 'not between') {

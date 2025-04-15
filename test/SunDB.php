@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.6.7
+ * @version   2.6.8
  */
 
 class SunDB
@@ -736,7 +736,7 @@ class SunDB
         foreach ($show as $rows) {
             if (!is_array($rows)) continue;
             if (count($rows) < 1) continue;
-            $tables[] = $this->connectionParams['dbname'] . '.' . reset($rows);
+            $tables[] = '`' . $this->connectionParams['dbname'] . '`.' . '`' . reset($rows) . '`';
         }
         if (count($tables) > 0) {
             $tables = implode(', ', $tables);

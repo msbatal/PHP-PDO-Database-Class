@@ -4,6 +4,8 @@ SunDB is a PHP PDO database class that utilizes PDO and prepared statements (MyS
 
 `Technical Document:` https://deepwiki.com/msbatal/PHP-PDO-Database-Class
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/msbatal/PHP-PDO-Database-Class)
+
 <hr>
 
 ### Table of Contents

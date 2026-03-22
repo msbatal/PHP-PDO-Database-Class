@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   2.6.8
+ * @version   2.6.9
  */
 
 class SunDB
@@ -45,13 +45,13 @@ class SunDB
      * Dynamic table control (on/off)
      * @var boolean
      */
-    private $checkTable = true;
+    private $checkTable = false;
 
     /**
      * Dynamic column control (on/off)
      * @var boolean
      */
-    private $checkColumn = true;
+    private $checkColumn = false;
 
     /**
      * SQL query
@@ -201,9 +201,9 @@ class SunDB
         $this->pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
         $this->pdo->setAttribute(\PDO::ATTR_CURSOR, \PDO::CURSOR_SCROLL);
         $this->pdo->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_EMPTY_STRING);
-        $this->pdo->setAttribute(\PDO::ATTR_PERSISTENT, true);
+        $this->pdo->setAttribute(\PDO::ATTR_PERSISTENT, false);
         if ($this->connectionParams['driver'] == 'mysql') {
-          $this->pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
+          $this->pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
           $this->pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
           $this->pdo->setAttribute(\PDO::MYSQL_ATTR_FOUND_ROWS, true);
           $this->pdo->setAttribute(\PDO::MYSQL_ATTR_INIT_COMMAND, 'SET CHARACTER SET utf8, NAMES utf8');
@@ -657,8 +657,7 @@ class SunDB
                 $query = $this->pdo()->prepare($this->query);
                 $result = $query->execute($this->values);
                 $this->rowCount = $query->rowCount(); // affected row count
-                $exp = explode(' ', $this->query); // for determine the action
-                if ($exp[0] == 'select') {
+                if ($query->columnCount() > 0) { // for determine the action
                     $this->queryResult = $query->fetchAll();
                     $query->closeCursor(); unset($query);
                     return $this->queryResult;

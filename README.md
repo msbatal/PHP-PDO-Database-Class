@@ -22,6 +22,7 @@ SunDB is a PHP PDO database class that utilizes PDO and prepared statements (MyS
 - **[Ordering Method](#ordering-method)**
 - **[Limiting Method](#limiting-method)**
 - **[Pagination Method](#pagination-method)**
+- **[Count Method](#count-method)**
 - **[Grouping Method](#grouping-method)**
 - **[Having Method](#having-method)**
 - **[Raw SQL Queries](#raw-sql-queries)**
@@ -511,6 +512,19 @@ foreach ($select as $row) {
     print_r($row);
 }
 ```
+
+`paginate()` uses `count()` internally (see below) — the two share the same total.
+
+### Count Method
+
+`count()` runs the same filtered `COUNT(*)` query `paginate()` uses internally, but standalone — for when you just need "how many rows match" without fetching any rows or paginating. This method is supported by only `select` query.
+
+```php
+$total = $db->select('tableName')->where('column', 'value', '=')->count();
+echo $total.' matching rows.';
+```
+
+It respects whatever `where()`/`join()` conditions were built on the query so far (`orderBy()`/`limit()` are ignored, since they don't affect a count). It also updates `totalCount()`, so `$db->select(...)->where(...)->count()` and `$db->totalCount()` afterward return the same number.
 
 ### Grouping Method
 

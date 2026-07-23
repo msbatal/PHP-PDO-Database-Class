@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.1.0
+ * @version   3.1.1
  */
 
 class SunDB
@@ -521,6 +521,7 @@ class SunDB
             if (empty($column) || empty($operator)) {
                 throw new Exception('Where clause must contain a value and operator.');
             }
+            $operator = strtolower(trim($operator)); // accept 'LIKE', 'In', etc. the same as their lowercase form
             $allowedOperators = ['=', '!=', '<>', '<', '>', '<=', '>=', 'like', 'not like', 'between', 'not between', 'in', 'not in'];
             if (!in_array($operator, $allowedOperators, true)) {
                 throw new Exception('Where operator "' . $operator . '" is not allowed.');

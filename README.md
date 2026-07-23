@@ -11,13 +11,17 @@ SunDB is a PHP PDO database class that utilizes PDO and prepared statements (MyS
 ### Table of Contents
 
 - **[Initialization](#initialization)**
+- **[Security](#security)**
 - **[Insert Query](#insert-query)**
 - **[Update Query](#update-query)**
 - **[Delete Query](#delete-query)**
+- **[Transactions](#transactions)**
 - **[Select Query](#select-query)**
+- **[Join Method](#join-method)**
 - **[Where Method](#where-method)**
 - **[Ordering Method](#ordering-method)**
 - **[Limiting Method](#limiting-method)**
+- **[Pagination Method](#pagination-method)**
 - **[Grouping Method](#grouping-method)**
 - **[Having Method](#having-method)**
 - **[Raw SQL Queries](#raw-sql-queries)**
@@ -79,6 +83,13 @@ $pdo = new PDO('mysql:dbname=sample;host=localhost', 'username', 'password');
 $db = new SunDB($pdo);
 ```
 
+### Security
+
+- SunDB always uses native (non-emulated) prepared statements (`PDO::ATTR_EMULATE_PREPARES = false`) on every driver. This closes a known SQL injection technique that only affects PDO's emulated mode ([details](https://slcyber.io/assetnote-security-research-center/a-novel-technique-for-sql-injection-in-pdos-prepared-statements/)).
+- Table and column names can never be sent as bound parameters, so SunDB validates every identifier it receives (table names, column names, insert/update keys, join columns) before using it — an invalid identifier throws an exception instead of reaching the database.
+- The comparison operator passed to `where()`, `orWhere()` and `join()` is checked against an allowlist.
+- A few parameters are intentionally NOT validated, because they're meant to carry raw SQL fragments: the `$columns` parameter of `select()`, the `$value` parameter of `having()`, and `whereRaw()`. Never pass user input into these directly.
+
 ### Insert Query
 
 Simple example with keys and values
@@ -134,6 +145,16 @@ if ($db->rowCount() > 0) {
 
 Insert query returns `true` or `false` result. Also, you can get the affected (inserted) rows by using `rowCount()` method. If you need last inserted record's id, you may use `lastInsertId()` method.
 
+Insert multiple rows in a single query
+```php
+$rows = [
+    ['column1' => 'Value 1', 'column2' => 'Value 2'],
+    ['column1' => 'Value 3', 'column2' => 'Value 4']
+];
+$insert = $db->insertMany('tableName', $rows)->run();
+//Gives: INSERT INTO tableName (column1, column2) VALUES ('Value 1', 'Value 2'), ('Value 3', 'Value 4');
+```
+
 ### Update Query
 
 ```php
@@ -185,6 +206,21 @@ if ($db->rowCount() > 0) {
 ```
 
 Delete query returns `true` or `false` result. Also, you can get the affected (deleted) rows by using `rowCount()` method.
+
+### Transactions
+
+Wrap multiple queries so they either all succeed or all get rolled back:
+```php
+$db->beginTransaction();
+try {
+    $db->insert('orders', $orderData)->run();
+    $db->insert('orderItems', $itemData)->run();
+    $db->commit();
+} catch (Exception $e) {
+    $db->rollback();
+    echo 'Failed: ' . $e->getMessage();
+}
+```
 
 ### Select Query
 
@@ -247,6 +283,39 @@ foreach ($select as $row) {
 ```
 
 If you need a single row and don't want to use a loop function, don't forget to use `first()`, `last()` or `random()` methods before `run()` method.
+
+### Join Method
+
+`join()` method allows you to specify `join` condition of the query, with `inner`, `left`, `right` or `full` as the join type. Column names accept a qualified `table.column` format. This method is supported by only `select` query.
+
+```php
+$select = $db->select('tableName', ['tableName.column1', 'otherTable.column2'])
+             ->join('otherTable', 'tableName.id', '=', 'otherTable.tableName_id', 'inner')
+             ->run();
+//Gives: SELECT tableName.column1,otherTable.column2 FROM tableName INNER JOIN otherTable ON tableName.id = otherTable.tableName_id;
+```
+
+Shortcuts for the join type (`type` parameter defaults to `inner` on `join()` itself):
+```php
+$select = $db->select('tableName')->leftJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')->run();
+//Gives: ... LEFT JOIN otherTable ON tableName.id = otherTable.tableName_id;
+
+$select = $db->select('tableName')->rightJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')->run();
+//Gives: ... RIGHT JOIN otherTable ON tableName.id = otherTable.tableName_id;
+
+$select = $db->select('tableName')->innerJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')->run();
+//Gives: ... INNER JOIN otherTable ON tableName.id = otherTable.tableName_id;
+```
+
+The table name and both columns are always identifier-validated, and the comparison operator is restricted to `=, !=, <>, <, >, <=, >=` — this method never accepts raw/unvalidated SQL, so it's safe to build even with user-influenced pieces (e.g. a whitelisted dropdown).
+
+You can chain `where()` on a joined query using the same qualified column format:
+```php
+$select = $db->select('tableName')
+             ->leftJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')
+             ->where('tableName.column', 'value', '=')
+             ->run();
+```
 
 ### Where Method
 
@@ -334,12 +403,35 @@ $select = $db->select('tableName')
 //Gives: SELECT * FROM tableName WHERE column1='value1' AND column2='value2' AND column3='value3';
 ```
 
-Also you can use raw where conditions:
+Also you can use raw where conditions, or the explicit `whereRaw()` method (same thing, but the name makes it obvious it's unvalidated):
 ```php
 $select = $db->select('tableName')
              ->where('column1 >= value1 AND column2 < value2');
              ->run();
 //Gives: SELECT * FROM tableName WHERE column1 >= value1 AND column2 < value2;
+
+$select = $db->select('tableName')
+             ->whereRaw('column1 >= value1 AND column2 < value2')
+             ->run();
+//Gives: SELECT * FROM tableName WHERE column1 >= value1 AND column2 < value2;
+```
+
+IS NULL / IS NOT NULL:
+```php
+$select = $db->select('tableName')->whereNull('column')->run();
+//Gives: SELECT * FROM tableName WHERE column IS NULL;
+
+$select = $db->select('tableName')->whereNotNull('column')->run();
+//Gives: SELECT * FROM tableName WHERE column IS NOT NULL;
+```
+
+Column names passed to `where()`/`orWhere()`/`whereNull()`/`whereNotNull()` support the qualified `table.column` format (for use after a `join()`). The comparison operator passed as the 3rd parameter of `where()`/`orWhere()` is validated against an allowlist (`=, !=, <>, <, >, <=, >=, like, not like, between, not between, in, not in`) — anything else throws an exception.
+
+Check if at least one row matches, without fetching the result set:
+```php
+if ($db->select('tableName')->where('column', 'value', '=')->exists()) {
+    echo 'Found!';
+}
 ```
 
 Find the total number of rows affected:
@@ -366,6 +458,8 @@ $select = $db->select('tableName', ['column1', 'column2'])
              ->run();
 //Gives: SELECT column1,column2 FROM tableName ORDER BY column1 ASC, column2 DESC, RAND ();
 ```
+
+Column names accept the qualified `table.column` format too (for use after a `join()`).
 
 ### Limiting Method
 
@@ -401,6 +495,23 @@ if ($db->rowCount() > 0) {
 }
 ```
 
+### Pagination Method
+
+`paginate()` is a convenience wrapper over `limit()` that also counts the total number of matching rows (ignoring the page limit) up front, available via `totalCount()`. This method is supported by only `select` query.
+
+```php
+$select = $db->select('tableName')
+             ->where('column', 'value', '=')
+             ->orderBy('id', 'asc')
+             ->paginate(1, 20) //page 1, 20 rows per page
+             ->run();
+
+echo $db->totalCount().' total matching rows.';
+foreach ($select as $row) {
+    print_r($row);
+}
+```
+
 ### Grouping Method
 
 `groupBy()` method allows you to specify `group by` condition of the query. This method is supported by only `select` query.
@@ -411,6 +522,8 @@ $select = $db->select('tableName')
              ->run();
 //Gives: SELECT * FROM tableName GROUP BY column;
 ```
+
+Column names accept the qualified `table.column` format too (for use after a `join()`).
 
 Also you can use functions with `groupBy()` method:
 

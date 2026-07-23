@@ -88,6 +88,13 @@
 
 
     /*
+    // Example for Count (filtered row count, without fetching the rows or paginating)
+    $count = $db->select('users')->where('id', '5', '>')->count();
+    echo $count.' matching rows.';
+    */
+
+
+    /*
     // Example for Join Method (adjust 'orders'/'user_id' to a real second table in your schema)
     $select = $db->select('users', ['users.id', 'users.name', 'orders.total'])
                  ->leftJoin('orders', 'users.id', '=', 'orders.user_id')

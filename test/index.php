@@ -36,9 +36,68 @@
     // $select = $db->select('users', $cols)->orderBy('id', 'desc')->all()->run();
     if ($select) {
         echo '<b>'.$db->rowCount().' rows found.</b><br><br>';
-        foreach ($select as $rows) { 
+        foreach ($select as $rows) {
             echo 'ID: '. $rows['id'].'<br>'.'Name: '.$rows['name'].'<br>'.'Surname: '.$rows['surname'];
             echo '<br><br>';
+        }
+    }
+    */
+
+
+    /*
+    // Example for Where Null / Not Null
+    $select = $db->select('users')->whereNull('surname')->run();
+    // $select = $db->select('users')->whereNotNull('surname')->run();
+    if ($select) {
+        echo '<b>'.$db->rowCount().' rows found.</b><br><br>';
+        foreach ($select as $rows) {
+            echo 'ID: '. $rows['id'].'<br>'.'Name: '.$rows['name'];
+            echo '<br><br>';
+        }
+    }
+    */
+
+
+    /*
+    // Example for Where Raw (not validated, don't put user input in the raw string)
+    $select = $db->select('users')->whereRaw('id > 5 AND id < 10')->run();
+    if ($select) {
+        echo '<b>'.$db->rowCount().' rows found.</b>';
+    }
+    */
+
+
+    /*
+    // Example for Exists (checks without fetching the whole result set)
+    $exists = $db->select('users')->where('id', '1', '=')->exists();
+    echo $exists ? 'User exists!' : 'User not found!';
+    */
+
+
+    /*
+    // Example for Pagination (page, rows per page)
+    $select = $db->select('users')->orderBy('id', 'asc')->paginate(1, 5)->run();
+    echo '<b>'.$db->totalCount().' total rows.</b><br><br>';
+    if ($select) {
+        foreach ($select as $rows) {
+            echo 'ID: '. $rows['id'].'<br>'.'Name: '.$rows['name'];
+            echo '<br><br>';
+        }
+    }
+    */
+
+
+    /*
+    // Example for Join Method (adjust 'orders'/'user_id' to a real second table in your schema)
+    $select = $db->select('users', ['users.id', 'users.name', 'orders.total'])
+                 ->leftJoin('orders', 'users.id', '=', 'orders.user_id')
+                 ->run();
+    // or ->join('orders', 'users.id', '=', 'orders.user_id', 'inner')
+    // or ->rightJoin('orders', 'users.id', '=', 'orders.user_id')
+    // or ->innerJoin('orders', 'users.id', '=', 'orders.user_id')
+    if ($select) {
+        foreach ($select as $rows) {
+            print_r($rows);
         }
     }
     */
@@ -60,6 +119,33 @@
     $insert = $db->insert('users', $data)->run();
     if ($insert) {
         echo 'Record inserted successfully! ID: '.$db->lastInsertId();
+    }
+    */
+
+
+    /*
+    // Example for Insert Multiple Rows in One Query
+    $rows = [
+        ['id' => Null, 'name' => rand(1111,9999), 'surname' => rand(1111,9999)],
+        ['id' => Null, 'name' => rand(1111,9999), 'surname' => rand(1111,9999)]
+    ];
+    $insert = $db->insertMany('users', $rows)->run();
+    if ($insert) {
+        echo 'Records inserted successfully!';
+    }
+    */
+
+
+    /*
+    // Example for Transactions
+    $db->beginTransaction();
+    try {
+        $db->insert('users', ['id' => Null, 'name' => rand(1111,9999), 'surname' => rand(1111,9999)])->run();
+        $db->commit();
+        echo 'Committed successfully!';
+    } catch (Exception $e) {
+        $db->rollback();
+        echo 'Failed, rolled back: '.$e->getMessage();
     }
     */
 

@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.1.1
+ * @version   3.2.0
  */
 
 class SunDB
@@ -783,7 +783,34 @@ class SunDB
     }
 
     /**
-     * Apply pagination — runs a COUNT query first (same table/joins/where, ignoring order/limit),
+     * Run a COUNT(*) query for the current table/joins/where (ignoring order/limit), store and return it
+     * Used internally by paginate(), but also callable on its own for a filtered count without pagination
+     *
+     * @return integer
+     */
+    public function count() {
+        $countQuery = 'select count(*) as total from `' . $this->table . '`';
+        if (count($this->joins) > 0) {
+            $countQuery .= ' ' . implode(' ', $this->joins);
+        }
+        if (count($this->where) > 0) {
+            $clnWhere = [];
+            $idx = 0;
+            foreach ($this->where as $value) {
+                $idx++;
+                $clnWhere[] = $idx == 1 ? ltrim(ltrim($value, 'or'), 'and') : $value;
+            }
+            $countQuery .= ' where ' . implode('', $clnWhere);
+        }
+        $query = $this->pdo()->prepare($countQuery);
+        $query->execute($this->whereValues);
+        $this->totalCount = (int) $query->fetch()['total'];
+        $query->closeCursor(); unset($query);
+        return $this->totalCount;
+    }
+
+    /**
+     * Apply pagination — runs count() first (same table/joins/where, ignoring order/limit),
      * stored for totalCount(), then narrows the query to the given page via limit()
      *
      * @param integer $page
@@ -795,28 +822,12 @@ class SunDB
         if (!is_int($page) || $page < 1 || !is_int($perPage) || $perPage < 1) {
             throw new Exception('Paginate clause must contain valid page and perPage values.');
         }
-        $countQuery = 'select count(*) as total from `' . $this->table . '`';
-        if (count($this->joins) > 0) {
-            $countQuery .= ' ' . implode(' ', $this->joins);
-        }
-        if (count($this->where) > 0) {
-            $clnWhere = [];
-            $count = 0;
-            foreach ($this->where as $value) {
-                $count++;
-                $clnWhere[] = $count == 1 ? ltrim(ltrim($value, 'or'), 'and') : $value;
-            }
-            $countQuery .= ' where ' . implode('', $clnWhere);
-        }
-        $query = $this->pdo()->prepare($countQuery);
-        $query->execute($this->whereValues);
-        $this->totalCount = (int) $query->fetch()['total'];
-        $query->closeCursor(); unset($query);
+        $this->count();
         return $this->limit(($page - 1) * $perPage, $perPage);
     }
 
     /**
-     * Return the total row count from the last paginate() call
+     * Return the total row count from the last count() or paginate() call
      *
      * @return integer
      */

@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.2.0
+ * @version   3.2.1
  */
 
 class SunDB
@@ -333,8 +333,8 @@ class SunDB
      * @return boolean
      */
     private function checkTable($table = null) {
-        $result = $this->pdo()->prepare("SHOW TABLES LIKE ?");
-        $result->execute([$table]);
+        $result = $this->pdo()->prepare("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?");
+        $result->execute([$this->connectionParams['dbname'], $table]);
         if ($result->rowCount() != 1) {
             throw new Exception('Table "' . $table . '" does not exist.');
         }

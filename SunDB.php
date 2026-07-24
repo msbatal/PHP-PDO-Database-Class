@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.2.1
+ * @version   3.2.2
  */
 
 class SunDB
@@ -949,10 +949,13 @@ class SunDB
                 $this->rowCount = $query->rowCount(); // selected row count
                 $query->closeCursor(); unset($query);
                 if ($this->which == 'first') {
-                    return $this->queryResult[0]; // return only first record
+                    return isset($this->queryResult[0]) ? $this->queryResult[0] : null; // return only first record (null if empty)
                 } else if ($this->which == 'last') {
-                    return end($this->queryResult); // return only last record
+                    return !empty($this->queryResult) ? end($this->queryResult) : null; // return only last record (null if empty)
                 } else if ($this->which == 'random') {
+                    if (empty($this->queryResult)) {
+                        return null; // no record to pick from
+                    }
                     $index = rand(0, $this->rowCount - 1);
                     return $this->queryResult[$index]; // return a random record
                 } else {

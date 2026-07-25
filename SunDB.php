@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.2.2
+ * @version   3.2.3
  */
 
 class SunDB
@@ -165,9 +165,6 @@ class SunDB
      * @param string $charset
      */
     public function __construct($type = null, $host = null, $username = null, $password = null, $dbname = null, $port = null, $charset = null) {
-        set_exception_handler(function($exception) {
-            echo '<b>[SunClass] Exception:</b> ' . $exception->getMessage();
-        });
         if (is_array($type)) { // connect to db using parameters in the array
             $this->connectionParams = $type;
         } else if (is_object($type)) { // connect to db using pdo object

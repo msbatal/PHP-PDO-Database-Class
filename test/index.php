@@ -68,6 +68,30 @@
 
 
     /*
+    // Example for Where Group (parenthesized OR inside an AND query)
+    // Plain where()->orWhere() chains have no grouping, so an OR placed after
+    // an AND filter escapes it (AND binds tighter than OR in SQL). whereGroup()
+    // wraps its callback's conditions in one set of parentheses instead - $q
+    // below is $db itself, just call where()/orWhere() on it as usual.
+    $select = $db->select('users')
+                 ->where('status', 'active', '=')
+                 ->whereGroup(function ($q) {
+                     $q->where('name', '%Sunhill%', 'like')
+                       ->orWhere('surname', '%Technology%', 'like');
+                 })
+                 ->run();
+    // Gives: SELECT * FROM users WHERE (status='active') AND ((name LIKE '%Sunhill%') OR (surname LIKE '%Technology%'));
+    if ($select) {
+        foreach ($select as $rows) {
+            echo 'ID: '. $rows['id'].'<br>'.'Name: '.$rows['name'];
+            echo '<br><br>';
+        }
+    }
+    // or ->orWhereGroup(function ($q) { ... }) to join the group with OR instead of AND
+    */
+
+
+    /*
     // Example for Exists (checks without fetching the whole result set)
     $exists = $db->select('users')->where('id', '1', '=')->exists();
     echo $exists ? 'User exists!' : 'User not found!';

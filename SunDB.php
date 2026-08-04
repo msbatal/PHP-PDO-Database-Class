@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.2.3
+ * @version   3.3.0
  */
 
 class SunDB
@@ -419,7 +419,7 @@ class SunDB
      * Build a bulk INSERT part of the query (multiple rows in one statement)
      *
      * @param string $table
-     * @param array $rows array of associative arrays, all with the same keys
+     * @param array $rows
      * @throws exception
      * @return object
      */
@@ -570,6 +570,56 @@ class SunDB
     }
 
     /**
+     * Build a parenthesized group of conditions inside the WHERE clause
+     *
+     * @param callable $callback
+     * @param string $condition
+     * @throws exception
+     * @return object
+     */
+    public function whereGroup($callback = null, $condition = 'and') {
+        if (!is_callable($callback)) {
+            throw new Exception('Where Group clause must contain a callable.');
+        }
+        $outerWhere = $this->where; // pause the outer conditions being built
+        $outerWhereValues = $this->whereValues;
+        $this->where = [];
+        $this->whereValues = [];
+
+        $callback($this); // fills the paused-empty arrays above via the normal where()/orWhere()
+
+        $groupWhere = $this->where;
+        $groupValues = $this->whereValues;
+        $this->where = $outerWhere; // resume the outer conditions
+        $this->whereValues = $outerWhereValues;
+
+        $count = 0;
+        $clean = [];
+        foreach ($groupWhere as $fragment) { // strip the group's own leading and/or, same as run() does for the outer query
+            $count++;
+            $clean[] = $count == 1 ? ltrim(ltrim($fragment, 'or'), 'and') : $fragment;
+        }
+        $sql = implode('', $clean);
+        if ($sql === '') {
+            return $this; // callback added nothing (e.g. an empty "in" array) - skip, don't emit "and ()"
+        }
+        $this->where[] = $condition . ' (' . $sql . ') ';
+        $this->whereValues = array_merge($this->whereValues, $groupValues);
+        return $this;
+    }
+
+    /**
+     * Shortcut for whereGroup(..., 'or')
+     *
+     * @param callable $callback
+     * @throws exception
+     * @return object
+     */
+    public function orWhereGroup($callback = null) {
+        return $this->whereGroup($callback, 'or');
+    }
+
+    /**
      * Add a "column IS NULL" condition
      *
      * @param string $column
@@ -608,7 +658,7 @@ class SunDB
     }
 
     /**
-     * Add a raw SQL WHERE fragment, not validated — never pass user input into it
+     * Add a raw SQL WHERE
      *
      * @param string $sql
      * @param string $condition
@@ -780,8 +830,7 @@ class SunDB
     }
 
     /**
-     * Run a COUNT(*) query for the current table/joins/where (ignoring order/limit), store and return it
-     * Used internally by paginate(), but also callable on its own for a filtered count without pagination
+     * Run a COUNT(*) query
      *
      * @return integer
      */
@@ -807,8 +856,7 @@ class SunDB
     }
 
     /**
-     * Apply pagination — runs count() first (same table/joins/where, ignoring order/limit),
-     * stored for totalCount(), then narrows the query to the given page via limit()
+     * Apply pagination
      *
      * @param integer $page
      * @param integer $perPage
@@ -824,7 +872,7 @@ class SunDB
     }
 
     /**
-     * Return the total row count from the last count() or paginate() call
+     * Return the total row count
      *
      * @return integer
      */
@@ -893,7 +941,7 @@ class SunDB
     }
 
     /**
-     * Return whether at least one row matches the built query (uses limit 0,1, doesn't fetch everything)
+     * Return whether at least one row matches the built query
      *
      * @throws exception
      * @return boolean

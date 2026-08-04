@@ -210,7 +210,10 @@ Delete query returns `true` or `false` result. Also, you can get the affected (d
 
 ### Transactions
 
-Wrap multiple queries so they either all succeed or all get rolled back:
+Some operations really are more than one query - saving an order also means saving its line items, and both should land in the database together or not at all. If the first `insert()` succeeds but the second one fails halfway through (a constraint violation, a lost connection, whatever the reason), you'd otherwise be left with an order that has no items - a corrupted, half-saved state that's hard to notice and harder to clean up later.
+
+`beginTransaction()`/`commit()`/`rollback()` prevent exactly that: every query issued between `beginTransaction()` and `commit()` is held provisionally, invisible to anything outside the transaction, until `commit()` makes all of it permanent in one step. If anything goes wrong first, calling `rollback()` instead discards every change made since `beginTransaction()` - including ones that individually "succeeded" - so the database ends up exactly as it was before you started, never caught in between. Wrap the whole attempt in `try`/`catch` so any `Exception` thrown mid-way (SunDB throws on bad identifiers, bad operators, a failed prepared statement, etc.) triggers that rollback automatically instead of leaving the transaction open:
+
 ```php
 $db->beginTransaction();
 try {
@@ -226,6 +229,7 @@ try {
 ### Select Query
 
 After any select function calls returned rows is stored in an array/object
+
 ```php
 $select = $db->select('tableName')->run(); //contains an array/object of all records
 //Gives: SELECT * FROM tableName;
@@ -251,7 +255,10 @@ if ($select) {
 or select just one row
 
 ```php
-$select = $db->select('tableName')->where('column', 'value', '=')->first()->run();
+$select = $db->select('tableName')
+             ->where('column', 'value', '=')
+             ->first()
+             ->run();
 //Gives: SELECT * FROM tableName WHERE column='value';
 
 echo $select['column'];
@@ -260,12 +267,17 @@ echo $select['column'];
 or select one column value or function result
 
 ```php
-$select = $db->select('tableName', ['column'])->limit(1)->first()->run();
+$select = $db->select('tableName', ['column'])
+             ->limit(1)
+             ->first()
+             ->run();
 //Gives: SELECT column FROM tableName LIMIT 1;
 
 echo $select['column'];
 
-$select = $db->select('tableName', ['count(*) as total'])->first()->run();
+$select = $db->select('tableName', ['count(*) as total'])
+             ->first()
+             ->run();
 //Gives: SELECT count(*) as total FROM tableName;
 
 echo $select['total'];
@@ -297,25 +309,32 @@ $select = $db->select('tableName', ['tableName.column1', 'otherTable.column2'])
 ```
 
 Shortcuts for the join type (`type` parameter defaults to `inner` on `join()` itself):
+
 ```php
-$select = $db->select('tableName')->leftJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')->run();
+$select = $db->select('tableName')
+             ->leftJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')
+             ->run();
 //Gives: ... LEFT JOIN otherTable ON tableName.id = otherTable.tableName_id;
 
-$select = $db->select('tableName')->rightJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')->run();
+$select = $db->select('tableName')
+             ->rightJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')
+             ->run();
 //Gives: ... RIGHT JOIN otherTable ON tableName.id = otherTable.tableName_id;
 
-$select = $db->select('tableName')->innerJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')->run();
+$select = $db->select('tableName')
+             ->innerJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')
+             ->run();
 //Gives: ... INNER JOIN otherTable ON tableName.id = otherTable.tableName_id;
 ```
 
-The table name and both columns are always identifier-validated, and the comparison operator is restricted to `=, !=, <>, <, >, <=, >=` — this method never accepts raw/unvalidated SQL, so it's safe to build even with user-influenced pieces (e.g. a whitelisted dropdown).
+The table name and both columns are always identifier-validated, and the comparison operator is restricted to `=, !=, <>, <, >, <=, >=`. This method never accepts raw/unvalidated SQL, so it's safe to build even with user-influenced pieces (e.g. a whitelisted dropdown).
 
 You can chain `where()` on a joined query using the same qualified column format:
 ```php
 $select = $db->select('tableName')
-             ->leftJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')
-             ->where('tableName.column', 'value', '=')
-             ->run();
+            ->leftJoin('otherTable', 'tableName.id', '=', 'otherTable.tableName_id')
+            ->where('tableName.column', 'value', '=')
+            ->run();
 ```
 
 ### Where Method
@@ -340,12 +359,12 @@ $select = $db->select('tableName')
 LIKE / NOT LIKE:
 ```php
 $select = $db->select('tableName')
-             ->where('column', 'value', 'like'); //or with wildcard (%value, value%, %value%)
+             ->where('column', 'value', 'like') //or with wildcard (%value, value%, %value%)
              ->run();
 //Gives: SELECT * FROM tableName WHERE column LIKE 'value';
 
 $select = $db->select('tableName')
-             ->where('column', 'value', 'not like'); //or with wildcard (%value, value%, %value%)
+             ->where('column', 'value', 'not like') //or with wildcard (%value, value%, %value%)
              ->run();
 //Gives: SELECT * FROM tableName WHERE column NOT LIKE 'value';
 ```
@@ -404,6 +423,20 @@ $select = $db->select('tableName')
 //Gives: SELECT * FROM tableName WHERE column1='value1' AND column2='value2' AND column3='value3';
 ```
 
+GROUPED OR (parenthesized):
+```php
+$select = $db->select('tableName')
+             ->where('status', 'active', '=')
+             ->whereGroup(function ($q) {
+                 $q->where('column1', '%value%', 'like')
+                   ->orWhere('column2', '%value%', 'like');
+             })
+             ->run();
+//Gives: SELECT * FROM tableName WHERE (status='active') AND ((column1 LIKE '%value%') OR (column2 LIKE '%value%'));
+```
+
+Plain chained `where()`/`orWhere()` calls have no grouping — `AND` binds tighter than `OR` in SQL, so `where('status', 'active', '=')->where('column1', 'value', 'like')->orWhere('column2', 'value', 'like')` actually compiles to `(status='active' AND column1 LIKE 'value') OR column2 LIKE 'value'`, letting the OR branch escape the `status` filter entirely. `whereGroup()` wraps its callback's conditions in one set of parentheses instead, so the group is filtered by the surrounding query as a whole. The callback receives the same `$db` object (`$q` above is `$db` itself) and calls `where()`/`orWhere()` on it exactly as usual (same operators, `like`, `between`, `in` all work the same way, and groups can even be nested); use `orWhereGroup()` to join the whole group with `OR` instead of `AND`.
+
 Also you can use raw where conditions, or the explicit `whereRaw()` method (same thing, but the name makes it obvious it's unvalidated):
 ```php
 $select = $db->select('tableName')
@@ -419,10 +452,14 @@ $select = $db->select('tableName')
 
 IS NULL / IS NOT NULL:
 ```php
-$select = $db->select('tableName')->whereNull('column')->run();
+$select = $db->select('tableName')
+             ->whereNull('column')
+             ->run();
 //Gives: SELECT * FROM tableName WHERE column IS NULL;
 
-$select = $db->select('tableName')->whereNotNull('column')->run();
+$select = $db->select('tableName')
+             ->whereNotNull('column')
+             ->run();
 //Gives: SELECT * FROM tableName WHERE column IS NOT NULL;
 ```
 
@@ -517,10 +554,11 @@ foreach ($select as $row) {
 
 ### Count Method
 
-`count()` runs the same filtered `COUNT(*)` query `paginate()` uses internally, but standalone — for when you just need "how many rows match" without fetching any rows or paginating. This method is supported by only `select` query.
+`count()` runs the same filtered `COUNT(*)` query `paginate()` uses internally, but standalone - for when you just need "how many rows match" without fetching any rows or paginating. This method is supported by only `select` query.
 
 ```php
 $total = $db->select('tableName')->where('column', 'value', '=')->count();
+
 echo $total.' matching rows.';
 ```
 

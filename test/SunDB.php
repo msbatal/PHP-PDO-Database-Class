@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.3.0
+ * @version   3.3.1
  */
 
 class SunDB
@@ -26,7 +26,7 @@ class SunDB
         'dbname' => null,
         'username' => null,
         'password' => null,
-        'charset' => 'utf8'
+        'charset' => 'utf8mb4'
     ];
 
     /**
@@ -215,7 +215,8 @@ class SunDB
         if ($this->connectionParams['driver'] == 'mysql') {
           $this->pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
           $this->pdo->setAttribute(PDO::MYSQL_ATTR_FOUND_ROWS, true);
-          $this->pdo->setAttribute(PDO::MYSQL_ATTR_INIT_COMMAND, 'SET CHARACTER SET utf8, NAMES utf8');
+          $charset = !empty($this->connectionParams['charset']) ? $this->connectionParams['charset'] : 'utf8mb4';
+          $this->pdo->setAttribute(PDO::MYSQL_ATTR_INIT_COMMAND, 'SET CHARACTER SET ' . $charset . ', NAMES ' . $charset);
         }
         if (!($this->pdo instanceof PDO)) {
             throw new Exception('This object is not an instance of PDO.');
@@ -473,7 +474,6 @@ class SunDB
         }
         foreach ($data as $key => $value) {
             $keys[] = '`' . $this->validateIdentifier($key) . '`=?';
-            if ($value === NULL) {$value = '';}
             $this->values[] = $value;
         }
         $keys = implode(',', $keys);

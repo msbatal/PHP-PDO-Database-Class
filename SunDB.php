@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.3.1
+ * @version   3.4.0
  */
 
 class SunDB
@@ -189,12 +189,21 @@ class SunDB
         if (empty($this->connectionParams['driver'])) {
             throw new Exception('Database Driver is not set.');
         }
+        $options = [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_ORACLE_NULLS       => PDO::NULL_EMPTY_STRING,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ];
+        if ($this->connectionParams['driver'] == 'mysql') {
+            $options[PDO::MYSQL_ATTR_USE_BUFFERED_QUERY] = true;
+        }
         if ($this->connectionParams['driver'] == 'sqlite') {
             $connectionString = 'sqlite:' . $this->connectionParams['url'];
-            $this->pdo = new PDO($connectionString);
+            $this->pdo = new PDO($connectionString, null, null, $options);
         } else if ($this->connectionParams['driver'] == 'mssql') {
             $connectionString = 'sqlsrv:Server=' . $this->connectionParams['host'] . ';Database=' . $this->connectionParams['dbname'];
-            $this->pdo = new PDO($connectionString, $this->connectionParams['username'], $this->connectionParams['password']);
+            $this->pdo = new PDO($connectionString, $this->connectionParams['username'], $this->connectionParams['password'], $options);
         } else {
             $connectionString = $this->connectionParams['driver'] . ':';
             $connectionParams = ['host', 'dbname', 'port', 'charset'];
@@ -204,19 +213,7 @@ class SunDB
                 }
             }
             $connectionString = rtrim($connectionString, ';');
-            $this->pdo = new PDO($connectionString, $this->connectionParams['username'], $this->connectionParams['password']);
-        }
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        $this->pdo->setAttribute(PDO::ATTR_CURSOR, PDO::CURSOR_SCROLL);
-        $this->pdo->setAttribute(PDO::ATTR_ORACLE_NULLS, PDO::NULL_EMPTY_STRING);
-        $this->pdo->setAttribute(PDO::ATTR_PERSISTENT, false);
-        $this->pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-        if ($this->connectionParams['driver'] == 'mysql') {
-          $this->pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
-          $this->pdo->setAttribute(PDO::MYSQL_ATTR_FOUND_ROWS, true);
-          $charset = !empty($this->connectionParams['charset']) ? $this->connectionParams['charset'] : 'utf8mb4';
-          $this->pdo->setAttribute(PDO::MYSQL_ATTR_INIT_COMMAND, 'SET CHARACTER SET ' . $charset . ', NAMES ' . $charset);
+            $this->pdo = new PDO($connectionString, $this->connectionParams['username'], $this->connectionParams['password'], $options);
         }
         if (!($this->pdo instanceof PDO)) {
             throw new Exception('This object is not an instance of PDO.');

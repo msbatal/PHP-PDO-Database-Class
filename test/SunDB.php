@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.4.0
+ * @version   3.5.0
  */
 
 class SunDB
@@ -1051,12 +1051,23 @@ class SunDB
      * @param string $fileName
      * @param string $action
      * @param array $excludeTables
+     * @param array $includeTables
      * @throws exception
      * @return string|file
      */
-    public function backup($fileName = null, $action = null, $excludeTables = []) {
+    public function backup($fileName = null, $action = null, $excludeTables = [], $includeTables = []) {
         if ($this->connectionParams['driver'] == 'sqlite') {
             throw new Exception('SQLite database backup is not allowed. Download "'.$this->connectionParams['url'].'" file directly.');
+        }
+        @set_time_limit(0);
+        $curMem = trim((string) ini_get('memory_limit'));
+        if ($curMem !== '' && $curMem !== '-1') {
+            $unit  = strtolower(substr($curMem, -1));
+            $bytes = (int) $curMem;
+            if      ($unit === 'g') { $bytes *= 1073741824; }
+            else if ($unit === 'm') { $bytes *= 1048576; }
+            else if ($unit === 'k') { $bytes *= 1024; }
+            if ($bytes < 536870912) { @ini_set('memory_limit', '512M'); }
         }
         if (empty($fileName)) {$fileName = 'SunDB-Backup-'.date("dmYHis").'.sql';} else {$fileName .= '.sql';} // define file name
         if (empty($action)) {$action = 'save';} // default action
@@ -1064,35 +1075,38 @@ class SunDB
             header('Content-disposition: attachment; filename='.$fileName);
             header('Content-type: application/force-download'); // header for download
         }
-        $show = $this->pdo()->query('show tables')->fetchAll(); // list all tables
-        $tables = [];
-        foreach ($show as $rows) {
-            $content = [];
-            $table = reset($rows);
-            if (!in_array($table, $excludeTables)) {
-                $create = $this->pdo()->query("show create table `$table`")->fetchAll(); // list table structures
-                $content[] = $create[0]['Create Table'].";\n"; // select Create Table structure
-                $query = $this->pdo()->prepare("select * from `$table`"); // list all values in selected table
-                $query->execute(array());
-                $select = $query->fetchAll();
-                if ($query->rowCount() > 0) {
-                    foreach ($select as $row) {
-                        if (count($row) < 1) {continue;}
-                        $header = "INSERT INTO `$table` VALUES ('"; // add Insert query
-                        $body = implode("', '", array_values($row)); // add listed values
-                        $footer = "');";
-                        $content[] = $header.$body.$footer;
+        $save  = ($action == 'save');
+        $pdo   = $this->pdo();
+        $show  = $pdo->query('show tables')->fetchAll(); // table list is small
+        $unbuffered = ($this->connectionParams['driver'] == 'mysql');
+        if ($unbuffered) { $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false); }
+        $emit = function ($text) use ($save) {
+            echo $save ? $text : nl2br($text);
+            if (function_exists('flush')) { @ob_flush(); @flush(); }
+        };
+        try {
+            $emit("# SunDB Database Backup File\n# Backup Date: ".date("Y-m-d H:i:s")."\n# Backup File: ".$fileName."\n\n\n");
+            $first = true;
+            foreach ($show as $rows) {
+                $table = reset($rows);
+                if (!empty($includeTables) && !in_array($table, $includeTables)) {continue;} // only keep requested tables
+                if (in_array($table, $excludeTables)) {continue;}
+                $create = $pdo->query("show create table `$table`")->fetchAll(); // table structure
+                if (empty($create[0]['Create Table'])) {continue;}
+                $emit(($first ? '' : "\n\n").$create[0]['Create Table'].";\n");
+                $first = false;
+                $stmt = $pdo->query("select * from `$table`"); // stream rows one by one
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $vals = [];
+                    foreach ($row as $v) {
+                        $vals[] = ($v === null) ? 'NULL' : $pdo->quote((string) $v);
                     }
-                    if (count($content) < 1) {continue;}
-                    $tables[$table] = implode("\n", $content);
+                    $emit("INSERT INTO `$table` VALUES (".implode(', ', $vals).");\n");
                 }
+                $stmt->closeCursor();
             }
-        }
-        if ($action == 'save') {
-            echo "# SunDB Database Backup File\n# Backup Date: ".date("Y-m-d H:i:s")."\n# Backup File: ".$fileName."\n\n\n";
-            echo implode("\n\n", array_values($tables));
-        } else { // if selected the Show method
-            echo nl2br(implode('<br><br>', array_values($tables)));
+        } finally {
+            if ($unbuffered) { $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true); }
         }
     }
 

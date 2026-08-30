@@ -643,9 +643,14 @@ Show the whole database (tables and records) as an SQL query:
 $db->backup(null, 'show');
 ```
 
-Download/Show the whole database (with exclude some tables) as an SQL query:
+Download/Show the whole database as an SQL query, excluding selected tables:
 ```php
 $db->backup(null, 'save', ['table1', 'table2']); //or 'show' action
+```
+
+Download/Show the selected tables as an SQL query:
+```php
+$db->backup(null, 'save', [], ['table1', 'table2']); //or 'show' action
 ```
 
 ### Maintaining Database

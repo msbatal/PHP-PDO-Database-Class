@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2020, Sunhill Technology <www.sunhillint.com>
  * @license   https://opensource.org/licenses/lgpl-3.0.html The GNU Lesser General Public License, version 3.0
  * @link      https://github.com/msbatal/PHP-PDO-Database-Class
- * @version   3.5.0
+ * @version   3.5.1
  */
 
 class SunDB
@@ -179,6 +179,12 @@ class SunDB
         self::$instance = $this;
     }
 
+    private static function bufferedQueryAttr() {
+        return defined('Pdo\\Mysql::ATTR_USE_BUFFERED_QUERY')
+            ? constant('Pdo\\Mysql::ATTR_USE_BUFFERED_QUERY')
+            : PDO::MYSQL_ATTR_USE_BUFFERED_QUERY;
+    }
+
     /**
      * Create PDO connection
      *
@@ -196,7 +202,7 @@ class SunDB
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
         if ($this->connectionParams['driver'] == 'mysql') {
-            $options[PDO::MYSQL_ATTR_USE_BUFFERED_QUERY] = true;
+            $options[self::bufferedQueryAttr()] = true;
         }
         if ($this->connectionParams['driver'] == 'sqlite') {
             $connectionString = 'sqlite:' . $this->connectionParams['url'];
@@ -1079,7 +1085,7 @@ class SunDB
         $pdo   = $this->pdo();
         $show  = $pdo->query('show tables')->fetchAll(); // table list is small
         $unbuffered = ($this->connectionParams['driver'] == 'mysql');
-        if ($unbuffered) { $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false); }
+        if ($unbuffered) { $pdo->setAttribute(self::bufferedQueryAttr(), false); }
         $emit = function ($text) use ($save) {
             echo $save ? $text : nl2br($text);
             if (function_exists('flush')) { @ob_flush(); @flush(); }
@@ -1106,7 +1112,7 @@ class SunDB
                 $stmt->closeCursor();
             }
         } finally {
-            if ($unbuffered) { $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true); }
+            if ($unbuffered) { $pdo->setAttribute(self::bufferedQueryAttr(), true); }
         }
     }
 
